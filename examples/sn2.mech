@@ -1,0 +1,7 @@
+reaction {
+  reactants: CH3-Br + OH-
+  products: CH3-OH + Br-
+}
+
+arrow(curved, from=OH:, to=C)
+arrow(curved, from=C-Br, to=Br)
