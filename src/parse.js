@@ -1,6 +1,6 @@
 import fs from "fs";
 
-function parseMechlang(text) {
+export function parseMechlang(text) {
   const lines = text
     .split("\n")
     .map(l => l.trim())
@@ -56,7 +56,7 @@ function parseMechlang(text) {
   return ast;
 }
 
-const input = fs.readFileSync("examples/sn2.mech", "utf-8");
+//const input = fs.readFileSync("examples/sn2.mech", "utf-8");
 const ast = parseMechlang(input);
 
-console.log(JSON.stringify(ast, null, 2));
+//console.log(JSON.stringify(ast, null, 2));
