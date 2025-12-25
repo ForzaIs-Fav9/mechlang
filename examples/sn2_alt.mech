@@ -1,0 +1,7 @@
+reaction {
+  reactants: CH3-Cl + CN-
+  products: CH3-CN + Cl-
+}
+
+arrow(curved, from=CN:, to=C)
+arrow(curved, from=C-Cl, to=Cl)
