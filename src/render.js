@@ -1,7 +1,11 @@
 import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
-const input = fs.readFileSync("examples/sn2.mech", "utf-8");
+const inputFile = process.argv[2] || "examples/sn2.mech";
+const input = fs.readFileSync(inputFile, "utf-8");
+const outputFile =
+  "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
+
 const ast = parseMechlang(input);
 const [r1, r2] = ast.reaction.reactants;
 const [p1, p2] = ast.reaction.products;
@@ -56,5 +60,5 @@ const svg = `
 </svg>
 `;
 
-fs.writeFileSync("out/sn2.svg", svg);
-console.log("Rendered out/sn2.svg");
+fs.writeFileSync(outputFile, svg);
+console.log(`Rendered ${outputFile}`);
