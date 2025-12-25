@@ -3,5 +3,6 @@ reaction {
   products: CH3-OH + OH-
 }
 
-arrow(curved, from=OH:, to=C)
++arrow(curved, from=OH:, to=Br)
+
 arrow(curved, from=C-Br, to=Br)
