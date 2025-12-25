@@ -1,0 +1,30 @@
+
+<svg width="500" height="200" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Reactants -->
+  <text x="100" y="100">CH3-Cl</text>
+<text x="40" y="80">CN-</text>
+
+<!-- Curved arrows -->
+<path d="M 60 85 
+         Q 90 45 
+         120 95"
+      stroke="black"
+      fill="none"
+      marker-end="url(#arrowhead)" />
+
+  <!-- Products -->
+ <text x="300" y="100">CH3-CN</text>
+<text x="340" y="80">Cl-</text>
+
+
+  <!-- Arrowhead definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="6" markerHeight="6"
+            refX="5" refY="3"
+            orient="auto">
+      <polygon points="0 0, 6 3, 0 6" fill="black"/>
+    </marker>
+  </defs>
+
+</svg>
