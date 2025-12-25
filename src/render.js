@@ -5,6 +5,22 @@ const input = fs.readFileSync("examples/sn2.mech", "utf-8");
 const ast = parseMechlang(input);
 const [r1, r2] = ast.reaction.reactants;
 const [p1, p2] = ast.reaction.products;
+const arrow = ast.arrows[0];
+let start = { x: 60, y: 85 };
+let end = { x: 120, y: 95 };
+
+// crude semantic mapping (v0.1)
+if (arrow.from.includes("OH")) {
+  start = { x: 40, y: 80 };
+}
+
+if (arrow.to === "C") {
+  end = { x: 120, y: 95 };
+}
+
+if (arrow.to === "Br") {
+  end = { x: 160, y: 80 };
+}
 
 
 // Very simple SVG layout (hardcoded)
@@ -15,11 +31,13 @@ const svg = `
   <text x="100" y="100">${r1}</text>
 <text x="40" y="80">${r2}</text>
 
-
-  <!-- Curved arrow -->
-  <path d="M 60 85 Q 100 40 120 95"
-        stroke="black" fill="none"
-        marker-end="url(#arrowhead)" />
+<!-- Curved arrows -->
+<path d="M ${start.x} ${start.y} 
+         Q ${(start.x + end.x)/2} ${(start.y - 40)} 
+         ${end.x} ${end.y}"
+      stroke="black"
+      fill="none"
+      marker-end="url(#arrowhead)" />
 
   <!-- Products -->
  <text x="300" y="100">${p1}</text>
