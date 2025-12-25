@@ -57,6 +57,6 @@ export function parseMechlang(text) {
 }
 
 //const input = fs.readFileSync("examples/sn2.mech", "utf-8");
-const ast = parseMechlang(input);
+//const ast = parseMechlang(input);
 
 //console.log(JSON.stringify(ast, null, 2));
