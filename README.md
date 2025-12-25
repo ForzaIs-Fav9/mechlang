@@ -57,11 +57,12 @@ arrow(curved, from=OH:, to=C)
 arrow(curved, from=C-Br, to=Br)
 ```
 Rendering this file produces an SVG diagram showing reactants, products, and curved-arrow electron flow corresponding to the reaction mechanism.
-Current scope
+
+## Current scope
 
 mechlang is an early-stage prototype focused on core semantics.
 
-Currently supported:
+## Currently supported:
 
 single-step reactions
 
@@ -71,7 +72,7 @@ curved-arrow electron movement
 
 SVG output
 
-Not yet supported:
+## Not yet supported:
 
 precise molecular geometry
 
