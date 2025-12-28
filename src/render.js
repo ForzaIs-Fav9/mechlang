@@ -1,31 +1,35 @@
 import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
-// ---- Input / Output ----
+/* ===============================
+   Input / Output
+   =============================== */
+
 const inputFile = process.argv[2] || "examples/sn2.mech";
 const input = fs.readFileSync(inputFile, "utf-8");
+
 const outputFile =
   "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
 
-// ---- Parse ----
+/* ===============================
+   Parse
+   =============================== */
+
 const ast = parseMechlang(input);
 
-// ---- Layout model (Stage B) ----
+/* ===============================
+   Layout (Stage B: molecules only)
+   =============================== */
+
 const layout = {
   reactants: { x: 100, y: 150, gap: 60 },
   products: { x: 450, y: 150, gap: 60 }
 };
 
-// ---- Anchor offsets ----
-const anchorOffsets = {
-  "C":  { dx: 0,   dy: 0 },
-  "Br": { dx: 40,  dy: 0 },
-  "Cl": { dx: 40,  dy: 0 },
-  "OH": { dx: -40, dy: 0 },
-  "CN": { dx: -40, dy: 0 }
-};
+/* ===============================
+   Render molecule text
+   =============================== */
 
-// ---- Generate text blocks ----
 const reactantTexts = ast.reaction.reactants
   .map((mol, i) => {
     const y = layout.reactants.y + i * layout.reactants.gap;
@@ -40,7 +44,10 @@ const productTexts = ast.reaction.products
   })
   .join("\n");
 
-// ---- Build molecule position map ----
+/* ===============================
+   Build molecule positions
+   =============================== */
+
 const moleculePositions = {};
 
 // Reactants
@@ -59,57 +66,45 @@ ast.reaction.products.forEach((mol, i) => {
   };
 });
 
-// ---- Resolve arrow anchors ----
+/* ===============================
+   Stage B anchor resolution
+   RULE:
+   - take last token of arrow target
+   - attach to molecule containing it
+   =============================== */
+
 const arrow = ast.arrows[0];
 
 function resolveAnchor(target) {
-  const normTarget = target.replace(/[^A-Za-z]/g, "").toUpperCase();
+  const token = target
+    .split("-")
+    .pop()
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase();
 
-  //  Bond reference (e.g. C-Br → CH3-Br)
-  if (target.includes("-")) {
-    const parts = target.split("-").map(p => p.replace(/[^A-Za-z]/g, "").toUpperCase());
-
-    for (const mol in moleculePositions) {
-      const normMol = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
-      if (parts.every(p => normMol.includes(p))) {
-        return moleculePositions[mol];
-      }
-    }
-  }
-
-  //  Direct ion/molecule match (Br, OH, CN)
   for (const mol in moleculePositions) {
-    const normMol = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
-    if (normMol.startsWith(normTarget)) {
+    const molKey = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
+    if (molKey.includes(token)) {
       return moleculePositions[mol];
-    }
-  }
-
-  //  Carbon fallback (Stage B)
-  if (normTarget === "C") {
-    for (const mol in moleculePositions) {
-      if (mol.includes("C")) {
-        return moleculePositions[mol];
-      }
     }
   }
 
   return null;
 }
 
-
-
-
 const start = resolveAnchor(arrow.from);
 const end   = resolveAnchor(arrow.to);
+
 if (!start || !end) {
   throw new Error(
     `Failed to resolve arrow anchors: from=${arrow.from}, to=${arrow.to}`
   );
 }
 
+/* ===============================
+   SVG output
+   =============================== */
 
-// ---- SVG ----
 const svg = `
 <svg width="650" height="400" xmlns="http://www.w3.org/2000/svg">
 
@@ -139,6 +134,9 @@ const svg = `
 </svg>
 `;
 
-// ---- Write output ----
+/* ===============================
+   Write file
+   =============================== */
+
 fs.writeFileSync(outputFile, svg);
 console.log(`Rendered ${outputFile}`);
