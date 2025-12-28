@@ -1,6 +1,36 @@
 import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
+// ---- Atom layout templates (Stage C.2) ----
+const atomTemplates = {
+  "CH3-Br": {
+    atoms: {
+      C:  { x: 0,  y: 0 },
+      Br: { x: 40, y: 0 }
+    }
+  },
+  "OH-": {
+    atoms: {
+      O: { x: 0,  y: 0 },
+      H: { x: 20, y: 0 }
+    }
+  },
+  "CN-": {
+    atoms: {
+      C: { x: 0,  y: 0 },
+      N: { x: -25, y: 0 }
+    }
+  },
+  "CH3-OH": {
+    atoms: {
+      C: { x: 0,  y: 0 },
+      O: { x: 40, y: 0 },
+      H: { x: 60, y: 0 }
+    }
+  }
+};
+
+
 /* ===============================
    Input / Output
    =============================== */
@@ -50,22 +80,30 @@ const productTexts = ast.reaction.products
 
 const reactantPositions = {};
 const productPositions = {};
+const moleculePositions = {};
 
 // Reactants
 ast.reaction.reactants.forEach((mol, i) => {
-  reactantPositions[mol] = {
-    x: layout.reactants.x,
-    y: layout.reactants.y + i * layout.reactants.gap
+  const baseX = layout.reactants.x;
+  const baseY = layout.reactants.y + i * layout.reactants.gap;
+
+  moleculePositions[mol] = {
+    base: { x: baseX, y: baseY },
+    atoms: atomTemplates[mol]?.atoms || {}
   };
 });
 
 // Products
 ast.reaction.products.forEach((mol, i) => {
-  productPositions[mol] = {
-    x: layout.products.x,
-    y: layout.products.y + i * layout.products.gap
+  const baseX = layout.products.x;
+  const baseY = layout.products.y + i * layout.products.gap;
+
+  moleculePositions[mol] = {
+    base: { x: baseX, y: baseY },
+    atoms: atomTemplates[mol]?.atoms || {}
   };
 });
+
 
 
 /* ===============================
@@ -77,20 +115,30 @@ ast.reaction.products.forEach((mol, i) => {
 
 const arrow = ast.arrows[0];
 
-function resolveAnchor(target, preferredMap, fallbackMap) {
-  const token = target
-    .split("-")
-    .pop()
-    .replace(/[^A-Za-z]/g, "")
-    .toUpperCase();
+function resolveAnchor(target) {
+  // Examples:
+  // "C-Br" → atom Br in molecule CH3-Br
+  // "OH"   → atom O in molecule OH-
 
-  //  Preferred side first
-  for (const mol in preferredMap) {
-    const key = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
-    if (key.includes(token)) {
-      return preferredMap[mol];
+  const atomKey = target.replace(/[^A-Za-z]/g, "");
+
+  for (const mol in moleculePositions) {
+    if (mol.includes(atomKey)) {
+      const molData = moleculePositions[mol];
+      const atom = molData.atoms[atomKey];
+
+      if (!atom) continue;
+
+      return {
+        x: molData.base.x + atom.x,
+        y: molData.base.y + atom.y
+      };
     }
   }
+
+  throw new Error(`Failed to resolve atom anchor: ${target}`);
+}
+
 
   //  Fallback side
   for (const mol in fallbackMap) {
