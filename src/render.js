@@ -63,26 +63,30 @@ ast.reaction.products.forEach((mol, i) => {
 const arrow = ast.arrows[0];
 
 function resolveAnchor(target) {
-  const key = target.replace(/[^A-Z]/g, "");
+  const normTarget = target.replace(/[^A-Za-z]/g, "").toUpperCase();
 
-  //  Bond reference fallback (e.g. C-Br → CH3-Br)
+  //  Bond reference (e.g. C-Br → CH3-Br)
   if (target.includes("-")) {
+    const parts = target.split("-").map(p => p.replace(/[^A-Za-z]/g, "").toUpperCase());
+
     for (const mol in moleculePositions) {
-      if (mol.includes("-") && target.includes(mol.split("-")[1])) {
+      const normMol = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
+      if (parts.every(p => normMol.includes(p))) {
         return moleculePositions[mol];
       }
     }
   }
 
-  //  Exact molecule / ion match (Br, OH, CN)
+  //  Direct ion/molecule match (Br, OH, CN)
   for (const mol in moleculePositions) {
-    if (mol.startsWith(key)) {
+    const normMol = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
+    if (normMol.startsWith(normTarget)) {
       return moleculePositions[mol];
     }
   }
 
-  //  Carbon fallback (Stage B rule)
-  if (key === "C") {
+  //  Carbon fallback (Stage B)
+  if (normTarget === "C") {
     for (const mol in moleculePositions) {
       if (mol.includes("C")) {
         return moleculePositions[mol];
@@ -92,6 +96,7 @@ function resolveAnchor(target) {
 
   return null;
 }
+
 
 
 
