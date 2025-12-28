@@ -10,15 +10,17 @@ const outputFile =
 // ---- Parse ----
 const ast = parseMechlang(input);
 
-// ---- Layout model (Stage A) ----
+// ---- Layout model (Stage B) ----
 const layout = {
-  reactants: { x: 100, y: 200, gap: 80 },
-  products: { x: 500, y: 200, gap: 80 }
+  reactants: { x: 100, y: 150, gap: 60 },
+  products: { x: 450, y: 150, gap: 60 }
 };
+
+// ---- Anchor offsets ----
 const anchorOffsets = {
-  "C":  { dx: 0,  dy: 0 },
-  "Br": { dx: 40, dy: 0 },
-  "Cl": { dx: 40, dy: 0 },
+  "C":  { dx: 0,   dy: 0 },
+  "Br": { dx: 40,  dy: 0 },
+  "Cl": { dx: 40,  dy: 0 },
   "OH": { dx: -40, dy: 0 },
   "CN": { dx: -40, dy: 0 }
 };
@@ -38,7 +40,26 @@ const productTexts = ast.reaction.products
   })
   .join("\n");
 
-// ---- Crude arrow logic (unchanged, allowed for Stage A) ----
+// ---- Build molecule position map ----
+const moleculePositions = {};
+
+// Reactants
+ast.reaction.reactants.forEach((mol, i) => {
+  moleculePositions[mol] = {
+    x: layout.reactants.x,
+    y: layout.reactants.y + i * layout.reactants.gap
+  };
+});
+
+// Products
+ast.reaction.products.forEach((mol, i) => {
+  moleculePositions[mol] = {
+    x: layout.products.x,
+    y: layout.products.y + i * layout.products.gap
+  };
+});
+
+// ---- Resolve arrow anchors ----
 const arrow = ast.arrows[0];
 
 function resolveAnchor(target) {
@@ -59,7 +80,6 @@ function resolveAnchor(target) {
 const start = resolveAnchor(arrow.from);
 const end   = resolveAnchor(arrow.to);
 
-
 // ---- SVG ----
 const svg = `
 <svg width="650" height="400" xmlns="http://www.w3.org/2000/svg">
@@ -78,24 +98,6 @@ const svg = `
 
   <!-- Products -->
   ${productTexts}
-  const moleculePositions = {};
-
-// Reactants
-ast.reaction.reactants.forEach((mol, i) => {
-  moleculePositions[mol] = {
-    x: layout.reactants.x,
-    y: layout.reactants.y + i * layout.reactants.gap
-  };
-});
-
-// Products
-ast.reaction.products.forEach((mol, i) => {
-  moleculePositions[mol] = {
-    x: layout.products.x,
-    y: layout.products.y + i * layout.products.gap
-  };
-});
-
 
   <!-- Arrowhead -->
   <defs>
