@@ -15,6 +15,13 @@ const layout = {
   reactants: { x: 100, y: 200, gap: 80 },
   products: { x: 500, y: 200, gap: 80 }
 };
+const anchorOffsets = {
+  "C":  { dx: 0,  dy: 0 },
+  "Br": { dx: 40, dy: 0 },
+  "Cl": { dx: 40, dy: 0 },
+  "OH": { dx: -40, dy: 0 },
+  "CN": { dx: -40, dy: 0 }
+};
 
 // ---- Generate text blocks ----
 const reactantTexts = ast.reaction.reactants
@@ -37,17 +44,24 @@ const arrow = ast.arrows[0];
 let start = { x: 160, y: 200 };
 let end = { x: 440, y: 200 };
 
-if (arrow.from.includes("OH")) {
-  start = { x: layout.reactants.x + 40, y: layout.reactants.y };
+function resolveAnchor(target) {
+  for (const mol in moleculePositions) {
+    if (target.includes(mol.replace(/[^A-Z]/g, ""))) {
+      const base = moleculePositions[mol];
+      const key = target.replace(/[^A-Z]/g, "");
+      const offset = anchorOffsets[key] || { dx: 0, dy: 0 };
+      return {
+        x: base.x + offset.dx,
+        y: base.y + offset.dy
+      };
+    }
+  }
+  return null;
 }
 
-if (arrow.to === "C") {
-  end = { x: layout.products.x - 40, y: layout.products.y };
-}
+const start = resolveAnchor(arrow.from);
+const end   = resolveAnchor(arrow.to);
 
-if (arrow.to === "Br") {
-  end = { x: layout.products.x - 40, y: layout.products.y + layout.products.gap };
-}
 
 // ---- SVG ----
 const svg = `
@@ -67,6 +81,24 @@ const svg = `
 
   <!-- Products -->
   ${productTexts}
+  const moleculePositions = {};
+
+// Reactants
+ast.reaction.reactants.forEach((mol, i) => {
+  moleculePositions[mol] = {
+    x: layout.reactants.x,
+    y: layout.reactants.y + i * layout.reactants.gap
+  };
+});
+
+// Products
+ast.reaction.products.forEach((mol, i) => {
+  moleculePositions[mol] = {
+    x: layout.products.x,
+    y: layout.products.y + i * layout.products.gap
+  };
+});
+
 
   <!-- Arrowhead -->
   <defs>
