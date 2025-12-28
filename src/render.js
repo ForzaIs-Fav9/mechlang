@@ -65,19 +65,23 @@ const arrow = ast.arrows[0];
 function resolveAnchor(target) {
   const key = target.replace(/[^A-Z]/g, "");
 
-  // 1️⃣ Exact match (OH-, Br-, CN-, etc.)
-  for (const mol in moleculePositions) {
-    if (mol.startsWith(key)) {
-      const base = moleculePositions[mol];
-      const offset = anchorOffsets[key] || { dx: 0, dy: 0 };
-      return {
-        x: base.x + offset.dx,
-        y: base.y + offset.dy
-      };
+  //  Bond reference fallback (e.g. C-Br → CH3-Br)
+  if (target.includes("-")) {
+    for (const mol in moleculePositions) {
+      if (mol.includes("-") && target.includes(mol.split("-")[1])) {
+        return moleculePositions[mol];
+      }
     }
   }
 
-  // 2️⃣ Carbon fallback (Stage B rule)
+  //  Exact molecule / ion match (Br, OH, CN)
+  for (const mol in moleculePositions) {
+    if (mol.startsWith(key)) {
+      return moleculePositions[mol];
+    }
+  }
+
+  //  Carbon fallback (Stage B rule)
   if (key === "C") {
     for (const mol in moleculePositions) {
       if (mol.includes("C")) {
@@ -88,6 +92,7 @@ function resolveAnchor(target) {
 
   return null;
 }
+
 
 
 const start = resolveAnchor(arrow.from);
