@@ -63,10 +63,12 @@ ast.reaction.products.forEach((mol, i) => {
 const arrow = ast.arrows[0];
 
 function resolveAnchor(target) {
+  const key = target.replace(/[^A-Z]/g, "");
+
+  // 1️⃣ Exact match (OH-, Br-, CN-, etc.)
   for (const mol in moleculePositions) {
-    if (target.includes(mol.replace(/[^A-Z]/g, ""))) {
+    if (mol.startsWith(key)) {
       const base = moleculePositions[mol];
-      const key = target.replace(/[^A-Z]/g, "");
       const offset = anchorOffsets[key] || { dx: 0, dy: 0 };
       return {
         x: base.x + offset.dx,
@@ -74,11 +76,28 @@ function resolveAnchor(target) {
       };
     }
   }
+
+  // 2️⃣ Carbon fallback (Stage B rule)
+  if (key === "C") {
+    for (const mol in moleculePositions) {
+      if (mol.includes("C")) {
+        return moleculePositions[mol];
+      }
+    }
+  }
+
   return null;
 }
 
+
 const start = resolveAnchor(arrow.from);
 const end   = resolveAnchor(arrow.to);
+if (!start || !end) {
+  throw new Error(
+    `Failed to resolve arrow anchors: from=${arrow.from}, to=${arrow.to}`
+  );
+}
+
 
 // ---- SVG ----
 const svg = `
