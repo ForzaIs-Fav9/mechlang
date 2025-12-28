@@ -1,7 +1,10 @@
 import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
-// ---- Atom layout templates (Stage C.2) ----
+/* ===============================
+   Atom layout templates (Stage C.2)
+   =============================== */
+
 const atomTemplates = {
   "CH3-Br": {
     atoms: {
@@ -30,7 +33,6 @@ const atomTemplates = {
   }
 };
 
-
 /* ===============================
    Input / Output
    =============================== */
@@ -48,7 +50,7 @@ const outputFile =
 const ast = parseMechlang(input);
 
 /* ===============================
-   Layout (Stage B: molecules only)
+   Layout (Stage B)
    =============================== */
 
 const layout = {
@@ -75,100 +77,61 @@ const productTexts = ast.reaction.products
   .join("\n");
 
 /* ===============================
-   Build molecule positions
+   Molecule + atom positions
    =============================== */
 
-const reactantPositions = {};
-const productPositions = {};
 const moleculePositions = {};
 
 // Reactants
 ast.reaction.reactants.forEach((mol, i) => {
-  const baseX = layout.reactants.x;
-  const baseY = layout.reactants.y + i * layout.reactants.gap;
-
   moleculePositions[mol] = {
-    base: { x: baseX, y: baseY },
+    base: {
+      x: layout.reactants.x,
+      y: layout.reactants.y + i * layout.reactants.gap
+    },
     atoms: atomTemplates[mol]?.atoms || {}
   };
 });
 
 // Products
 ast.reaction.products.forEach((mol, i) => {
-  const baseX = layout.products.x;
-  const baseY = layout.products.y + i * layout.products.gap;
-
   moleculePositions[mol] = {
-    base: { x: baseX, y: baseY },
+    base: {
+      x: layout.products.x,
+      y: layout.products.y + i * layout.products.gap
+    },
     atoms: atomTemplates[mol]?.atoms || {}
   };
 });
 
-
-
 /* ===============================
-   Stage B anchor resolution
-   RULE:
-   - take last token of arrow target
-   - attach to molecule containing it
+   Atom-aware anchor resolution
    =============================== */
 
 const arrow = ast.arrows[0];
 
 function resolveAnchor(target) {
-  // Examples:
-  // "C-Br" → atom Br in molecule CH3-Br
-  // "OH"   → atom O in molecule OH-
-
   const atomKey = target.replace(/[^A-Za-z]/g, "");
 
   for (const mol in moleculePositions) {
-    if (mol.includes(atomKey)) {
-      const molData = moleculePositions[mol];
-      const atom = molData.atoms[atomKey];
+    if (!mol.includes(atomKey)) continue;
 
-      if (!atom) continue;
+    const molData = moleculePositions[mol];
+    const atom = molData.atoms[atomKey];
 
-      return {
-        x: molData.base.x + atom.x,
-        y: molData.base.y + atom.y
-      };
-    }
+    if (!atom) continue;
+
+    return {
+      x: molData.base.x + atom.x,
+      y: molData.base.y + atom.y
+    };
   }
 
   throw new Error(`Failed to resolve atom anchor: ${target}`);
 }
 
-
-  //  Fallback side
-  for (const mol in fallbackMap) {
-    const key = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
-    if (key.includes(token)) {
-      return fallbackMap[mol];
-    }
-  }
-
-  return null;
-}
-
-
-const start = resolveAnchor(
-  arrow.from,
-  reactantPositions,
-  productPositions
-);
-
-const end = resolveAnchor(
-  arrow.to,
-  productPositions,
-  reactantPositions
-);
-
-if (!start || !end) {
-  throw new Error(
-    `Failed to resolve arrow anchors: from=${arrow.from}, to=${arrow.to}`
-  );
-}
+const start = resolveAnchor(arrow.from);
+const end   = resolveAnchor(arrow.to);
 
 /* ===============================
    SVG output
