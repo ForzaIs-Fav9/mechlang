@@ -48,11 +48,12 @@ const productTexts = ast.reaction.products
    Build molecule positions
    =============================== */
 
-const moleculePositions = {};
+const reactantPositions = {};
+const productPositions = {};
 
 // Reactants
 ast.reaction.reactants.forEach((mol, i) => {
-  moleculePositions[mol] = {
+  reactantPositions[mol] = {
     x: layout.reactants.x,
     y: layout.reactants.y + i * layout.reactants.gap
   };
@@ -60,11 +61,12 @@ ast.reaction.reactants.forEach((mol, i) => {
 
 // Products
 ast.reaction.products.forEach((mol, i) => {
-  moleculePositions[mol] = {
+  productPositions[mol] = {
     x: layout.products.x,
     y: layout.products.y + i * layout.products.gap
   };
 });
+
 
 /* ===============================
    Stage B anchor resolution
@@ -75,25 +77,44 @@ ast.reaction.products.forEach((mol, i) => {
 
 const arrow = ast.arrows[0];
 
-function resolveAnchor(target) {
+function resolveAnchor(target, preferredMap, fallbackMap) {
   const token = target
     .split("-")
     .pop()
     .replace(/[^A-Za-z]/g, "")
     .toUpperCase();
 
-  for (const mol in moleculePositions) {
-    const molKey = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
-    if (molKey.includes(token)) {
-      return moleculePositions[mol];
+  //  Preferred side first
+  for (const mol in preferredMap) {
+    const key = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
+    if (key.includes(token)) {
+      return preferredMap[mol];
+    }
+  }
+
+  //  Fallback side
+  for (const mol in fallbackMap) {
+    const key = mol.replace(/[^A-Za-z]/g, "").toUpperCase();
+    if (key.includes(token)) {
+      return fallbackMap[mol];
     }
   }
 
   return null;
 }
 
-const start = resolveAnchor(arrow.from);
-const end   = resolveAnchor(arrow.to);
+
+const start = resolveAnchor(
+  arrow.from,
+  reactantPositions,
+  productPositions
+);
+
+const end = resolveAnchor(
+  arrow.to,
+  productPositions,
+  reactantPositions
+);
 
 if (!start || !end) {
   throw new Error(
