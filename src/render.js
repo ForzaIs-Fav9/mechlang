@@ -111,11 +111,17 @@ ast.reaction.products.forEach((mol, i) => {
 const arrow = ast.arrows[0];
 
 function resolveAnchor(target) {
-  const atomKey = target.replace(/[^A-Za-z]/g, "");
+  // Handle bond targets like "C-Br"
+  let atomKey = target;
+
+  if (target.includes("-")) {
+    atomKey = target.split("-").pop(); // C-Br → Br
+  }
+
+  // Clean charge / symbols
+  atomKey = atomKey.replace(/[^A-Za-z]/g, "");
 
   for (const mol in moleculePositions) {
-    if (!mol.includes(atomKey)) continue;
-
     const molData = moleculePositions[mol];
     const atom = molData.atoms[atomKey];
 
@@ -129,6 +135,7 @@ function resolveAnchor(target) {
 
   throw new Error(`Failed to resolve atom anchor: ${target}`);
 }
+
 
 const start = resolveAnchor(arrow.from);
 const end   = resolveAnchor(arrow.to);
