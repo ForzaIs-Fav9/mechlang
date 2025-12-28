@@ -41,9 +41,6 @@ const productTexts = ast.reaction.products
 // ---- Crude arrow logic (unchanged, allowed for Stage A) ----
 const arrow = ast.arrows[0];
 
-let start = { x: 160, y: 200 };
-let end = { x: 440, y: 200 };
-
 function resolveAnchor(target) {
   for (const mol in moleculePositions) {
     if (target.includes(mol.replace(/[^A-Z]/g, ""))) {
