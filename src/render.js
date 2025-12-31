@@ -50,7 +50,7 @@ const outputFile =
 const ast = parseMechlang(input);
 
 /* ===============================
-   Layout (Stage B: molecules only)
+   Layout (Stage B)
    =============================== */
 
 const layout = {
@@ -77,7 +77,7 @@ const productTexts = ast.reaction.products
   .join("\n");
 
 /* ===============================
-   Molecule position map
+   Molecule + atom positions
    =============================== */
 
 const moleculePositions = {};
@@ -109,10 +109,10 @@ ast.reaction.products.forEach((mol, i) => {
    =============================== */
 
 function canonicalAtom(target, direction) {
-  // 1. Explicit atom (O, N, Br, etc.)
+  // 1. Explicit atom (O, N, Br)
   if (/^[A-Z][a-z]?$/.test(target)) return target;
 
-  // 2. Functional group → canonical atom
+  // 2. Functional groups
   const groupMap = {
     "OH": "O",
     "CN": "C",
@@ -122,7 +122,7 @@ function canonicalAtom(target, direction) {
   };
   if (groupMap[target]) return groupMap[target];
 
-  // 3. Bond reference (C-Br, C-O)
+  // 3. Bond reference (C-Br)
   if (target.includes("-")) {
     const [a, b] = target.split("-");
     return direction === "from" ? b : a;
@@ -131,8 +131,29 @@ function canonicalAtom(target, direction) {
   return null;
 }
 
+/* ===============================
+   Stage C.4 — Lone-pair offsets
+   =============================== */
+
+function lonePairOffset(atom) {
+  const offsets = {
+    O:  { x: -12, y: -12 },
+    N:  { x: -12, y: -12 },
+    Br: { x:  12, y: -12 },
+    Cl: { x:  12, y: -12 }
+  };
+  return offsets[atom] || { x: -10, y: -10 };
+}
+
+/* ===============================
+   Anchor resolution (C.4)
+   =============================== */
+
 function resolveAnchor(target, direction) {
-  const atom = canonicalAtom(target, direction);
+  const isLonePair = target.startsWith(":");
+  const cleanTarget = isLonePair ? target.slice(1) : target;
+
+  const atom = canonicalAtom(cleanTarget, direction);
   if (!atom) return null;
 
   for (const mol in moleculePositions) {
@@ -140,10 +161,16 @@ function resolveAnchor(target, direction) {
     const atomData = molData.atoms[atom];
     if (!atomData) continue;
 
-    return {
-      x: molData.base.x + atomData.x,
-      y: molData.base.y + atomData.y
-    };
+    let x = molData.base.x + atomData.x;
+    let y = molData.base.y + atomData.y;
+
+    if (isLonePair) {
+      const offset = lonePairOffset(atom);
+      x += offset.x;
+      y += offset.y;
+    }
+
+    return { x, y };
   }
 
   return null;
@@ -177,7 +204,7 @@ const svg = `
   <!-- Curved arrow -->
   <path
     d="M ${start.x} ${start.y}
-       Q ${(start.x + end.x) / 2} ${start.y - 80}
+       Q ${(start.x + end.x) / 2} ${Math.min(start.y, end.y) - 80}
        ${end.x} ${end.y}"
     stroke="black"
     fill="none"
