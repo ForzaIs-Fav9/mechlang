@@ -20,7 +20,7 @@ const atomTemplates = {
   },
   "CN-": {
     atoms: {
-      C: { x: 0,  y: 0 },
+      C: { x: 0,   y: 0 },
       N: { x: -25, y: 0 }
     }
   },
@@ -50,16 +50,16 @@ const outputFile =
 const ast = parseMechlang(input);
 
 /* ===============================
-   Layout (Stage B)
+   Layout (Stage B: molecules only)
    =============================== */
 
 const layout = {
   reactants: { x: 100, y: 150, gap: 60 },
-  products: { x: 450, y: 150, gap: 60 }
+  products:  { x: 450, y: 150, gap: 60 }
 };
 
 /* ===============================
-   Render molecule text
+   Render molecule labels
    =============================== */
 
 const reactantTexts = ast.reaction.reactants
@@ -77,7 +77,7 @@ const productTexts = ast.reaction.products
   .join("\n");
 
 /* ===============================
-   Molecule + atom positions
+   Molecule position map
    =============================== */
 
 const moleculePositions = {};
@@ -105,40 +105,64 @@ ast.reaction.products.forEach((mol, i) => {
 });
 
 /* ===============================
-   Atom-aware anchor resolution
+   Stage C.3 — Implicit atom resolution
+   =============================== */
+
+function canonicalAtom(target, direction) {
+  // 1. Explicit atom (O, N, Br, etc.)
+  if (/^[A-Z][a-z]?$/.test(target)) return target;
+
+  // 2. Functional group → canonical atom
+  const groupMap = {
+    "OH": "O",
+    "CN": "C",
+    "NO2": "N",
+    "NH2": "N",
+    "COOH": "C"
+  };
+  if (groupMap[target]) return groupMap[target];
+
+  // 3. Bond reference (C-Br, C-O)
+  if (target.includes("-")) {
+    const [a, b] = target.split("-");
+    return direction === "from" ? b : a;
+  }
+
+  return null;
+}
+
+function resolveAnchor(target, direction) {
+  const atom = canonicalAtom(target, direction);
+  if (!atom) return null;
+
+  for (const mol in moleculePositions) {
+    const molData = moleculePositions[mol];
+    const atomData = molData.atoms[atom];
+    if (!atomData) continue;
+
+    return {
+      x: molData.base.x + atomData.x,
+      y: molData.base.y + atomData.y
+    };
+  }
+
+  return null;
+}
+
+/* ===============================
+   Resolve arrow
    =============================== */
 
 const arrow = ast.arrows[0];
 
-function resolveAnchor(target) {
-  // Handle bond targets like "C-Br"
-  let atomKey = target;
+const start = resolveAnchor(arrow.from, "from");
+const end   = resolveAnchor(arrow.to,   "to");
 
-  if (target.includes("-")) {
-    atomKey = target.split("-").pop(); // C-Br → Br
-  }
-
-  // Clean charge / symbols
-  atomKey = atomKey.replace(/[^A-Za-z]/g, "");
-
-  for (const mol in moleculePositions) {
-    const molData = moleculePositions[mol];
-    const atom = molData.atoms[atomKey];
-
-    if (!atom) continue;
-
-    return {
-      x: molData.base.x + atom.x,
-      y: molData.base.y + atom.y
-    };
-  }
-
-  throw new Error(`Failed to resolve atom anchor: ${target}`);
+if (!start || !end) {
+  throw new Error(
+    `Failed to resolve arrow anchors: from=${arrow.from}, to=${arrow.to}`
+  );
 }
-
-
-const start = resolveAnchor(arrow.from);
-const end   = resolveAnchor(arrow.to);
 
 /* ===============================
    SVG output
