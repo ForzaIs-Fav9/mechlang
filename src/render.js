@@ -2,34 +2,21 @@ import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
 /* ===============================
-   Atom layout templates
+   Atom templates
    =============================== */
 
 const atomTemplates = {
   "CH3-Br": {
-    atoms: {
-      C:  { x: 0,  y: 0 },
-      Br: { x: 40, y: 0 }
-    }
+    atoms: { C: { x: 0, y: 0 }, Br: { x: 40, y: 0 } }
   },
   "OH-": {
-    atoms: {
-      O: { x: 0,  y: 0 },
-      H: { x: 20, y: 0 }
-    }
+    atoms: { O: { x: 0, y: 0 }, H: { x: 20, y: 0 } }
   },
   "CN-": {
-    atoms: {
-      C: { x: 0,   y: 0 },
-      N: { x: -25, y: 0 }
-    }
+    atoms: { C: { x: 0, y: 0 }, N: { x: -25, y: 0 } }
   },
   "CH3-OH": {
-    atoms: {
-      C: { x: 0,  y: 0 },
-      O: { x: 40, y: 0 },
-      H: { x: 60, y: 0 }
-    }
+    atoms: { C: { x: 0, y: 0 }, O: { x: 40, y: 0 }, H: { x: 60, y: 0 } }
   }
 };
 
@@ -57,7 +44,7 @@ const layout = {
 };
 
 /* ===============================
-   Molecule labels
+   Labels
    =============================== */
 
 function renderLabels(list, x, yBase) {
@@ -88,14 +75,14 @@ addMolecules(ast.reaction.reactants, layout.reactants.x, layout.reactants.y);
 addMolecules(ast.reaction.products,  layout.products.x,  layout.products.y);
 
 /* ===============================
-   Canonical atom resolution
+   Anchor resolution
    =============================== */
 
 function canonicalAtom(target, direction) {
   if (/^[A-Z][a-z]?$/.test(target)) return target;
 
-  const groupMap = { OH: "O", CN: "C", NO2: "N", NH2: "N", COOH: "C" };
-  if (groupMap[target]) return groupMap[target];
+  const map = { OH: "O", CN: "C" };
+  if (map[target]) return map[target];
 
   if (target.includes("-")) {
     const [a, b] = target.split("-");
@@ -104,53 +91,35 @@ function canonicalAtom(target, direction) {
   return null;
 }
 
-/* ===============================
-   Anchor resolution
-   =============================== */
-
 function resolveAnchor(target, direction) {
   const atom = canonicalAtom(target.replace(":", ""), direction);
   if (!atom) return null;
 
   for (const mol in moleculePositions) {
-    const molData = moleculePositions[mol];
-    const atomData = molData.atoms[atom];
-    if (!atomData) continue;
-
+    const m = moleculePositions[mol];
+    if (!m.atoms[atom]) continue;
     return {
-      x: molData.base.x + atomData.x,
-      y: molData.base.y + atomData.y
+      x: m.base.x + m.atoms[atom].x,
+      y: m.base.y + m.atoms[atom].y
     };
   }
   return null;
 }
 
 /* ===============================
-   Arrow geometry (C.6)
+   Arrow geometry (FIXED)
    =============================== */
 
 function arrowPath(start, end) {
   const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const len = Math.hypot(dx, dy) || 1;
 
-  // normal vector
-  const nx = -dy / len;
-  const ny = dx / len;
+  // Force left → right chemistry bias
+  const curvature = Math.sign(dx || 1) * 80;
 
-  // push arrow off the molecule
-  const offset = 14;
-  const sx = start.x + nx * offset;
-  const sy = start.y + ny * offset;
-  const ex = end.x + nx * offset;
-  const ey = end.y + ny * offset;
+  const cx = (start.x + end.x) / 2;
+  const cy = Math.min(start.y, end.y) - Math.abs(curvature);
 
-  // curvature
-  const curve = 60;
-  const cx = (sx + ex) / 2 + nx * curve;
-  const cy = (sy + ey) / 2 + ny * curve;
-
-  return `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`;
+  return `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`;
 }
 
 /* ===============================
@@ -162,7 +131,7 @@ const start = resolveAnchor(arrow.from, "from");
 const end   = resolveAnchor(arrow.to,   "to");
 
 if (!start || !end) {
-  throw new Error(`Failed to resolve arrow anchors`);
+  throw new Error("Arrow anchors unresolved");
 }
 
 /* ===============================
