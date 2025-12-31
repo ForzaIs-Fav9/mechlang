@@ -34,14 +34,12 @@ const atomTemplates = {
 };
 
 /* ===============================
-   Input / Output
+   IO
    =============================== */
 
 const inputFile = process.argv[2] || "examples/sn2.mech";
 const input = fs.readFileSync(inputFile, "utf-8");
-
-const outputFile =
-  "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
+const outputFile = "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
 
 /* ===============================
    Parse
@@ -54,27 +52,22 @@ const ast = parseMechlang(input);
    =============================== */
 
 const layout = {
-  reactants: { x: 100, y: 150, gap: 60 },
-  products:  { x: 450, y: 150, gap: 60 }
+  reactants: { x: 120, y: 150, gap: 60 },
+  products:  { x: 520, y: 150, gap: 60 }
 };
 
 /* ===============================
    Molecule labels
    =============================== */
 
-const reactantTexts = ast.reaction.reactants
-  .map((mol, i) => {
-    const y = layout.reactants.y + i * layout.reactants.gap;
-    return `<text x="${layout.reactants.x}" y="${y}" font-size="16">${mol}</text>`;
-  })
-  .join("\n");
+function renderLabels(list, x, yBase) {
+  return list.map((mol, i) =>
+    `<text x="${x}" y="${yBase + i * layout.reactants.gap}" font-size="16">${mol}</text>`
+  ).join("\n");
+}
 
-const productTexts = ast.reaction.products
-  .map((mol, i) => {
-    const y = layout.products.y + i * layout.products.gap;
-    return `<text x="${layout.products.x}" y="${y}" font-size="16">${mol}</text>`;
-  })
-  .join("\n");
+const reactantTexts = renderLabels(ast.reaction.reactants, layout.reactants.x, layout.reactants.y);
+const productTexts  = renderLabels(ast.reaction.products,  layout.products.x,  layout.products.y);
 
 /* ===============================
    Molecule positions
@@ -85,10 +78,7 @@ const moleculePositions = {};
 function addMolecules(list, xBase, yBase) {
   list.forEach((mol, i) => {
     moleculePositions[mol] = {
-      base: {
-        x: xBase,
-        y: yBase + i * layout.reactants.gap
-      },
+      base: { x: xBase, y: yBase + i * layout.reactants.gap },
       atoms: atomTemplates[mol]?.atoms || {}
     };
   });
@@ -104,60 +94,22 @@ addMolecules(ast.reaction.products,  layout.products.x,  layout.products.y);
 function canonicalAtom(target, direction) {
   if (/^[A-Z][a-z]?$/.test(target)) return target;
 
-  const groupMap = {
-    OH: "O",
-    CN: "C",
-    NO2: "N",
-    NH2: "N",
-    COOH: "C"
-  };
+  const groupMap = { OH: "O", CN: "C", NO2: "N", NH2: "N", COOH: "C" };
   if (groupMap[target]) return groupMap[target];
 
   if (target.includes("-")) {
     const [a, b] = target.split("-");
     return direction === "from" ? b : a;
   }
-
   return null;
 }
 
 /* ===============================
-   Lone pair offset
-   =============================== */
-
-function lonePairOffset(atom) {
-  return {
-    x: atom === "Br" ? 12 : -12,
-    y: -12
-  };
-}
-
-/* ===============================
-   Anchor resolution (C.5)
+   Anchor resolution
    =============================== */
 
 function resolveAnchor(target, direction) {
-  const isLonePair = target.startsWith(":");
-  const clean = isLonePair ? target.slice(1) : target;
-
-  // 🔹 BOND TARGET → midpoint
-  if (clean.includes("-") && direction === "to") {
-    const [a, b] = clean.split("-");
-
-    for (const mol in moleculePositions) {
-      const atoms = moleculePositions[mol].atoms;
-      if (atoms[a] && atoms[b]) {
-        const base = moleculePositions[mol].base;
-        return {
-          x: base.x + (atoms[a].x + atoms[b].x) / 2,
-          y: base.y + (atoms[a].y + atoms[b].y) / 2
-        };
-      }
-    }
-  }
-
-  // 🔹 ATOM / GROUP TARGET
-  const atom = canonicalAtom(clean, direction);
+  const atom = canonicalAtom(target.replace(":", ""), direction);
   if (!atom) return null;
 
   for (const mol in moleculePositions) {
@@ -165,19 +117,40 @@ function resolveAnchor(target, direction) {
     const atomData = molData.atoms[atom];
     if (!atomData) continue;
 
-    let x = molData.base.x + atomData.x;
-    let y = molData.base.y + atomData.y;
-
-    if (isLonePair) {
-      const offset = lonePairOffset(atom);
-      x += offset.x;
-      y += offset.y;
-    }
-
-    return { x, y };
+    return {
+      x: molData.base.x + atomData.x,
+      y: molData.base.y + atomData.y
+    };
   }
-
   return null;
+}
+
+/* ===============================
+   Arrow geometry (C.6)
+   =============================== */
+
+function arrowPath(start, end) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const len = Math.hypot(dx, dy) || 1;
+
+  // normal vector
+  const nx = -dy / len;
+  const ny = dx / len;
+
+  // push arrow off the molecule
+  const offset = 14;
+  const sx = start.x + nx * offset;
+  const sy = start.y + ny * offset;
+  const ex = end.x + nx * offset;
+  const ey = end.y + ny * offset;
+
+  // curvature
+  const curve = 60;
+  const cx = (sx + ex) / 2 + nx * curve;
+  const cy = (sy + ey) / 2 + ny * curve;
+
+  return `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`;
 }
 
 /* ===============================
@@ -185,14 +158,11 @@ function resolveAnchor(target, direction) {
    =============================== */
 
 const arrow = ast.arrows[0];
-
 const start = resolveAnchor(arrow.from, "from");
 const end   = resolveAnchor(arrow.to,   "to");
 
 if (!start || !end) {
-  throw new Error(
-    `Failed to resolve arrow anchors: from=${arrow.from}, to=${arrow.to}`
-  );
+  throw new Error(`Failed to resolve arrow anchors`);
 }
 
 /* ===============================
@@ -200,16 +170,15 @@ if (!start || !end) {
    =============================== */
 
 const svg = `
-<svg width="650" height="400" xmlns="http://www.w3.org/2000/svg">
+<svg width="750" height="420" xmlns="http://www.w3.org/2000/svg">
 
   ${reactantTexts}
 
   <path
-    d="M ${start.x} ${start.y}
-       Q ${(start.x + end.x) / 2} ${Math.min(start.y, end.y) - 80}
-       ${end.x} ${end.y}"
+    d="${arrowPath(start, end)}"
     stroke="black"
     fill="none"
+    stroke-width="1.5"
     marker-end="url(#arrowhead)" />
 
   ${productTexts}
@@ -223,10 +192,6 @@ const svg = `
 
 </svg>
 `;
-
-/* ===============================
-   Write output
-   =============================== */
 
 fs.writeFileSync(outputFile, svg);
 console.log(`Rendered ${outputFile}`);
