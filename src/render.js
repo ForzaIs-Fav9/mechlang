@@ -2,21 +2,41 @@ import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
 /* ===============================
-   Atom templates
+   Atom templates (visual-only)
    =============================== */
 
 const atomTemplates = {
   "CH3-Br": {
-    atoms: { C: { x: 0, y: 0 }, Br: { x: 40, y: 0 } }
+    atoms: {
+      C:  { x: 0,  y: 0 },
+      Br: { x: 40, y: 0 }
+    },
+    bonds: [["C", "Br"]]
   },
+
   "OH-": {
-    atoms: { O: { x: 0, y: 0 }, H: { x: 20, y: 0 } }
+    atoms: {
+      O: { x: 0,  y: 0 },
+      H: { x: 20, y: 0 }
+    },
+    bonds: [["O", "H"]]
   },
+
   "CN-": {
-    atoms: { C: { x: 0, y: 0 }, N: { x: -25, y: 0 } }
+    atoms: {
+      C: { x: 0,   y: 0 },
+      N: { x: -25, y: 0 }
+    },
+    bonds: [["C", "N"]]
   },
+
   "CH3-OH": {
-    atoms: { C: { x: 0, y: 0 }, O: { x: 40, y: 0 }, H: { x: 60, y: 0 } }
+    atoms: {
+      C: { x: 0,  y: 0 },
+      O: { x: 40, y: 0 },
+      H: { x: 60, y: 0 }
+    },
+    bonds: [["C", "O"], ["O", "H"]]
   }
 };
 
@@ -26,7 +46,8 @@ const atomTemplates = {
 
 const inputFile = process.argv[2] || "examples/sn2.mech";
 const input = fs.readFileSync(inputFile, "utf-8");
-const outputFile = "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
+const outputFile =
+  "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
 
 /* ===============================
    Parse
@@ -44,35 +65,73 @@ const layout = {
 };
 
 /* ===============================
-   Labels
+   Build molecule models
    =============================== */
 
-function renderLabels(list, x, yBase) {
-  return list.map((mol, i) =>
-    `<text x="${x}" y="${yBase + i * layout.reactants.gap}" font-size="16">${mol}</text>`
-  ).join("\n");
-}
+function buildMolecules(list, xBase, yBase) {
+  return list.map((name, i) => {
+    const template = atomTemplates[name] || { atoms: {}, bonds: [] };
+    const base = { x: xBase, y: yBase + i * layout.reactants.gap };
 
-const reactantTexts = renderLabels(ast.reaction.reactants, layout.reactants.x, layout.reactants.y);
-const productTexts  = renderLabels(ast.reaction.products,  layout.products.x,  layout.products.y);
+    const atoms = {};
+    for (const atom in template.atoms) {
+      atoms[atom] = {
+        x: base.x + template.atoms[atom].x,
+        y: base.y + template.atoms[atom].y
+      };
+    }
 
-/* ===============================
-   Molecule positions
-   =============================== */
+    const bonds = (template.bonds || []).map(([a, b]) => {
+      if (!atoms[a] || !atoms[b]) return null;
+      return {
+        x1: atoms[a].x,
+        y1: atoms[a].y,
+        x2: atoms[b].x,
+        y2: atoms[b].y
+      };
+    }).filter(Boolean);
 
-const moleculePositions = {};
-
-function addMolecules(list, xBase, yBase) {
-  list.forEach((mol, i) => {
-    moleculePositions[mol] = {
-      base: { x: xBase, y: yBase + i * layout.reactants.gap },
-      atoms: atomTemplates[mol]?.atoms || {}
-    };
+    return { name, base, atoms, bonds };
   });
 }
 
-addMolecules(ast.reaction.reactants, layout.reactants.x, layout.reactants.y);
-addMolecules(ast.reaction.products,  layout.products.x,  layout.products.y);
+const reactantMolecules = buildMolecules(
+  ast.reaction.reactants,
+  layout.reactants.x,
+  layout.reactants.y
+);
+
+const productMolecules = buildMolecules(
+  ast.reaction.products,
+  layout.products.x,
+  layout.products.y
+);
+
+const molecules = [...reactantMolecules, ...productMolecules];
+
+/* ===============================
+   Label rendering (temporary)
+   =============================== */
+
+function renderLabels(list) {
+  return list.map(mol =>
+    `<text x="${mol.base.x}" y="${mol.base.y}" font-size="16">${mol.name}</text>`
+  ).join("\n");
+}
+
+/* ===============================
+   Bond rendering
+   =============================== */
+
+function renderBonds(molecules) {
+  return molecules.flatMap(mol =>
+    mol.bonds.map(bond =>
+      `<line x1="${bond.x1}" y1="${bond.y1}"
+             x2="${bond.x2}" y2="${bond.y2}"
+             stroke="black" stroke-width="1.5" />`
+    )
+  ).join("\n");
+}
 
 /* ===============================
    Anchor resolution
@@ -92,28 +151,25 @@ function canonicalAtom(target, direction) {
 }
 
 function resolveAnchor(target, direction) {
-  const atom = canonicalAtom(target.replace(":", ""), direction);
-  if (!atom) return null;
+  const clean = target.replace(":", "");
+  const atom = canonicalAtom(clean, direction);
 
-  for (const mol in moleculePositions) {
-    const m = moleculePositions[mol];
-    if (!m.atoms[atom]) continue;
-    return {
-      x: m.base.x + m.atoms[atom].x,
-      y: m.base.y + m.atoms[atom].y
-    };
+  for (const mol of molecules) {
+    if (atom && mol.atoms[atom]) {
+      return mol.atoms[atom];
+    }
   }
+
+  console.warn("Could not resolve anchor:", target);
   return null;
 }
 
 /* ===============================
-   Arrow geometry (FIXED)
+   Arrow geometry
    =============================== */
 
 function arrowPath(start, end) {
   const dx = end.x - start.x;
-
-  // Force left → right chemistry bias
   const curvature = Math.sign(dx || 1) * 80;
 
   const cx = (start.x + end.x) / 2;
@@ -123,15 +179,25 @@ function arrowPath(start, end) {
 }
 
 /* ===============================
-   Resolve arrow
+   Render arrows
    =============================== */
 
-const arrow = ast.arrows[0];
-const start = resolveAnchor(arrow.from, "from");
-const end   = resolveAnchor(arrow.to,   "to");
+function renderArrows(arrows) {
+  return arrows.map(arrow => {
+    const start = resolveAnchor(arrow.from, "from");
+    const end   = resolveAnchor(arrow.to, "to");
 
-if (!start || !end) {
-  throw new Error("Arrow anchors unresolved");
+    if (!start || !end) return "";
+
+    return `
+      <path
+        d="${arrowPath(start, end)}"
+        stroke="black"
+        fill="none"
+        stroke-width="1.5"
+        marker-end="url(#arrowhead)" />
+    `;
+  }).join("\n");
 }
 
 /* ===============================
@@ -141,16 +207,15 @@ if (!start || !end) {
 const svg = `
 <svg width="750" height="420" xmlns="http://www.w3.org/2000/svg">
 
-  ${reactantTexts}
+  <!-- Arrows -->
+  ${renderArrows(ast.arrows)}
 
-  <path
-    d="${arrowPath(start, end)}"
-    stroke="black"
-    fill="none"
-    stroke-width="1.5"
-    marker-end="url(#arrowhead)" />
+  <!-- Bonds -->
+  ${renderBonds(molecules)}
 
-  ${productTexts}
+  <!-- Molecule labels (temporary) -->
+  ${renderLabels(reactantMolecules)}
+  ${renderLabels(productMolecules)}
 
   <defs>
     <marker id="arrowhead" markerWidth="6" markerHeight="6"
