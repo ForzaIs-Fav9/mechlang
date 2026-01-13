@@ -2,7 +2,13 @@ import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
 /* ===============================
-   Atom templates (visual-only)
+   Config
+   =============================== */
+
+const SHOW_MOLECULE_LABELS = false;
+
+/* ===============================
+   Atom templates (visual only)
    =============================== */
 
 const atomTemplates = {
@@ -81,15 +87,17 @@ function buildMolecules(list, xBase, yBase) {
       };
     }
 
-    const bonds = (template.bonds || []).map(([a, b]) => {
-      if (!atoms[a] || !atoms[b]) return null;
-      return {
-        x1: atoms[a].x,
-        y1: atoms[a].y,
-        x2: atoms[b].x,
-        y2: atoms[b].y
-      };
-    }).filter(Boolean);
+    const bonds = (template.bonds || [])
+      .map(([a, b]) => {
+        if (!atoms[a] || !atoms[b]) return null;
+        return {
+          x1: atoms[a].x,
+          y1: atoms[a].y,
+          x2: atoms[b].x,
+          y2: atoms[b].y
+        };
+      })
+      .filter(Boolean);
 
     return { name, base, atoms, bonds };
   });
@@ -110,12 +118,15 @@ const productMolecules = buildMolecules(
 const molecules = [...reactantMolecules, ...productMolecules];
 
 /* ===============================
-   Label rendering (temporary)
+   Optional molecule labels (debug)
    =============================== */
 
-function renderLabels(list) {
-  return list.map(mol =>
-    `<text x="${mol.base.x}" y="${mol.base.y}" font-size="16">${mol.name}</text>`
+function renderMoleculeLabels(molecules) {
+  if (!SHOW_MOLECULE_LABELS) return "";
+  return molecules.map(mol =>
+    `<text x="${mol.base.x - 20}" y="${mol.base.y + 20}" font-size="14">
+      ${mol.name}
+     </text>`
   ).join("\n");
 }
 
@@ -129,6 +140,23 @@ function renderBonds(molecules) {
       `<line x1="${bond.x1}" y1="${bond.y1}"
              x2="${bond.x2}" y2="${bond.y2}"
              stroke="black" stroke-width="1.5" />`
+    )
+  ).join("\n");
+}
+
+/* ===============================
+   Atom label rendering (NEW)
+   =============================== */
+
+function renderAtoms(molecules) {
+  return molecules.flatMap(mol =>
+    Object.entries(mol.atoms).map(([symbol, pos]) =>
+      `<text x="${pos.x}" y="${pos.y + 5}"
+             font-size="14"
+             text-anchor="middle"
+             font-family="serif">
+        ${symbol}
+       </text>`
     )
   ).join("\n");
 }
@@ -160,7 +188,7 @@ function resolveAnchor(target, direction) {
     }
   }
 
-  console.warn("Could not resolve anchor:", target);
+  console.warn("Unresolved arrow anchor:", target);
   return null;
 }
 
@@ -213,9 +241,11 @@ const svg = `
   <!-- Bonds -->
   ${renderBonds(molecules)}
 
-  <!-- Molecule labels (temporary) -->
-  ${renderLabels(reactantMolecules)}
-  ${renderLabels(productMolecules)}
+  <!-- Atom labels -->
+  ${renderAtoms(molecules)}
+
+  <!-- Debug molecule labels -->
+  ${renderMoleculeLabels(molecules)}
 
   <defs>
     <marker id="arrowhead" markerWidth="6" markerHeight="6"
