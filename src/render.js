@@ -1,3 +1,4 @@
+console.log("USING ATOM-LEVEL RENDERER v0.5");
 import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
