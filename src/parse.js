@@ -1,5 +1,3 @@
-import fs from "fs";
-
 export function parseMechlang(text) {
   const lines = text
     .split("\n")
@@ -8,8 +6,7 @@ export function parseMechlang(text) {
 
   const ast = {
     reaction: null,
-    arrows: null,
-    steps: null
+    steps: []
   };
 
   let i = 0;
@@ -40,53 +37,49 @@ export function parseMechlang(text) {
     }
 
     /* ===============================
-       Legacy arrows (v0.6 and below)
+       Step block (STRICT)
        =============================== */
-    if (line.startsWith("arrows:")) {
-      ast.arrows = [];
-      i++;
+    if (line.startsWith("step")) {
+      const step = { arrows: [] };
+      i++; // move into step block
 
-      while (i < lines.length && lines[i].includes("->")) {
-        const [from, to] = lines[i].split("->").map(s => s.trim());
-        ast.arrows.push({
-          style: "curved",
-          from,
-          to
-        });
+      while (i < lines.length && !lines[i].startsWith("}")) {
+        const l = lines[i];
+
+        if (l.startsWith("arrow")) {
+          const inside = l.slice(
+            l.indexOf("(") + 1,
+            l.lastIndexOf(")")
+          );
+
+          const parts = inside.split(",").map(p => p.trim());
+
+          const style = parts[0];
+          const from  = parts.find(p => p.startsWith("from="))?.split("=")[1];
+          const to    = parts.find(p => p.startsWith("to="))?.split("=")[1];
+
+          if (!from || !to) {
+            console.warn("Malformed arrow:", l);
+          } else {
+            step.arrows.push({ style, from, to });
+          }
+        }
+
         i++;
       }
+
+      ast.steps.push(step);
+      i++; // skip closing }
       continue;
     }
 
     /* ===============================
-       Steps block (v0.7)
+       Illegal arrows (STRICT MODE)
        =============================== */
-    if (line.startsWith("steps:")) {
-      ast.steps = [];
-      i++;
-
-      while (i < lines.length && lines[i].startsWith("-")) {
-        // Expect: - arrows:
-        if (!lines[i].includes("arrows")) {
-          throw new Error("Expected '- arrows:' inside steps");
-        }
-
-        const step = { arrows: [] };
-        i++;
-
-        while (i < lines.length && lines[i].includes("->")) {
-          const [from, to] = lines[i].split("->").map(s => s.trim());
-          step.arrows.push({
-            style: "curved",
-            from,
-            to
-          });
-          i++;
-        }
-
-        ast.steps.push(step);
-      }
-      continue;
+    if (line.startsWith("arrow")) {
+      throw new Error(
+        "Arrow must be inside step { } (v0.6 strict mode)"
+      );
     }
 
     i++;
