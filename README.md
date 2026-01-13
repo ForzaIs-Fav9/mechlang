@@ -83,3 +83,9 @@ multi-step mechanisms
 chemical validation or error checking
 
 These limitations are intentional to keep the core language and architecture clear.
+### Commit Conventions
+
+MechLang uses conventional commit-style messages:
+feat, fix, refactor, docs, chore.
+
+Earlier commits may not fully follow this standard.
