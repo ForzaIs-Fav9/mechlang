@@ -89,3 +89,12 @@ MechLang uses conventional commit-style messages:
 feat, fix, refactor, docs, chore.
 
 Earlier commits may not fully follow this standard.
+
+## Mechanism Steps
+
+All arrows must appear inside a `step { }` block.
+
+A step represents a single elementary reaction event where all arrows
+occur simultaneously.
+
+Arrows outside steps are invalid.

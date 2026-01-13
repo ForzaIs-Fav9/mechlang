@@ -3,7 +3,7 @@ reaction {
   products: CH3-CN + Br-
 }
 
-steps:
-  - arrows:
-      CN: -> C
-      C-Br -> Br
+step {
+  arrow(curved, from=CN:, to=C)
+  arrow(curved, from=C-Br, to=Br)
+}
