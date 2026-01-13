@@ -2,37 +2,35 @@ import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
 /* ===============================
+   Config
+   =============================== */
+
+const SHOW_MOLECULE_LABELS = false;
+const ARROW_VERTICAL_SPACING = 22;
+
+/* ===============================
    Atom templates (visual only)
    =============================== */
 
 const atomTemplates = {
   "CH3-Br": {
-    atoms: {
-      C:  { x: 0,  y: 0 },
-      Br: { x: 40, y: 0 }
-    },
+    atoms: { C: { x: 0, y: 0 }, Br: { x: 40, y: 0 } },
     bonds: [["C", "Br"]]
   },
 
   "OH-": {
-    atoms: {
-      O: { x: 0,  y: 0 },
-      H: { x: 20, y: 0 }
-    },
+    atoms: { O: { x: 0, y: 0 }, H: { x: 20, y: 0 } },
     bonds: [["O", "H"]]
   },
 
   "CN-": {
-    atoms: {
-      C: { x: 0,   y: 0 },
-      N: { x: -25, y: 0 }
-    },
+    atoms: { C: { x: 0, y: 0 }, N: { x: -25, y: 0 } },
     bonds: [["C", "N"]]
   },
 
   "CH3-OH": {
     atoms: {
-      C: { x: 0,  y: 0 },
+      C: { x: 0, y: 0 },
       O: { x: 40, y: 0 },
       H: { x: 60, y: 0 }
     },
@@ -61,7 +59,7 @@ const ast = parseMechlang(input);
 
 const layout = {
   reactants: { x: 120, y: 150, gap: 60 },
-  products:  { x: 520, y: 150, gap: 60 }
+  products: { x: 520, y: 150, gap: 60 }
 };
 
 /* ===============================
@@ -81,125 +79,104 @@ function buildMolecules(list, xBase, yBase) {
       };
     }
 
-    const bonds = (template.bonds || [])
-      .map(([a, b]) => {
-        if (!atoms[a] || !atoms[b]) return null;
-        return {
-          x1: atoms[a].x,
-          y1: atoms[a].y,
-          x2: atoms[b].x,
-          y2: atoms[b].y
-        };
-      })
-      .filter(Boolean);
+    const bonds = template.bonds
+      .map(([a, b]) => ({
+        a, b,
+        x1: atoms[a].x,
+        y1: atoms[a].y,
+        x2: atoms[b].x,
+        y2: atoms[b].y,
+        mx: (atoms[a].x + atoms[b].x) / 2,
+        my: (atoms[a].y + atoms[b].y) / 2
+      }));
 
     return { name, base, atoms, bonds };
   });
 }
 
-const reactantMolecules = buildMolecules(
-  ast.reaction.reactants,
-  layout.reactants.x,
-  layout.reactants.y
-);
-
-const productMolecules = buildMolecules(
-  ast.reaction.products,
-  layout.products.x,
-  layout.products.y
-);
-
-const molecules = [...reactantMolecules, ...productMolecules];
+const molecules = [
+  ...buildMolecules(ast.reaction.reactants, layout.reactants.x, layout.reactants.y),
+  ...buildMolecules(ast.reaction.products, layout.products.x, layout.products.y)
+];
 
 /* ===============================
-   Temporary molecule labels
+   Rendering helpers
    =============================== */
 
-function renderLabels(molecules) {
-  return molecules.map(mol =>
-    `<text x="${mol.base.x - 20}" y="${mol.base.y + 20}" font-size="16">
-      ${mol.name}
-     </text>`
-  ).join("\n");
-}
-
-/* ===============================
-   Bond rendering
-   =============================== */
-
-function renderBonds(molecules) {
-  return molecules.flatMap(mol =>
-    mol.bonds.map(bond =>
-      `<line x1="${bond.x1}" y1="${bond.y1}"
-             x2="${bond.x2}" y2="${bond.y2}"
+function renderBonds() {
+  return molecules.flatMap(m =>
+    m.bonds.map(b =>
+      `<line x1="${b.x1}" y1="${b.y1}"
+             x2="${b.x2}" y2="${b.y2}"
              stroke="black" stroke-width="1.5" />`
     )
   ).join("\n");
 }
 
-/* ===============================
-   Anchor resolution
-   =============================== */
-
-function canonicalAtom(target, direction) {
-  if (/^[A-Z][a-z]?$/.test(target)) return target;
-
-  const map = { OH: "O", CN: "C" };
-  if (map[target]) return map[target];
-
-  if (target.includes("-")) {
-    const [a, b] = target.split("-");
-    return direction === "from" ? b : a;
-  }
-  return null;
+function renderAtoms() {
+  return molecules.flatMap(m =>
+    Object.entries(m.atoms).map(([sym, pos]) =>
+      `<text x="${pos.x}" y="${pos.y + 5}"
+             font-size="14"
+             text-anchor="middle"
+             font-family="serif">${sym}</text>`
+    )
+  ).join("\n");
 }
 
-function resolveAnchor(target, direction) {
-  const clean = target.replace(":", "");
-  const atom = canonicalAtom(clean, direction);
+/* ===============================
+   Arrow anchor resolution
+   =============================== */
 
-  for (const mol of molecules) {
-    if (atom && mol.atoms[atom]) {
-      return mol.atoms[atom];
+function resolveTarget(target) {
+  const clean = target.replace(":", "");
+
+  if (clean.includes("-")) {
+    const [a, b] = clean.split("-");
+    for (const m of molecules) {
+      const bond = m.bonds.find(
+        bd => (bd.a === a && bd.b === b) || (bd.a === b && bd.b === a)
+      );
+      if (bond) return { x: bond.mx, y: bond.my };
     }
   }
 
-  console.warn("Unresolved arrow anchor:", target);
+  for (const m of molecules) {
+    if (m.atoms[clean]) return m.atoms[clean];
+  }
+
   return null;
 }
 
 /* ===============================
-   Arrow geometry
+   Arrow geometry (v0.6)
    =============================== */
 
-function arrowPath(start, end) {
+function arrowPath(start, end, index) {
   const dx = end.x - start.x;
-  const curvature = Math.sign(dx || 1) * 80;
+  const curvature = Math.sign(dx || 1) * (70 + index * 10);
+  const verticalLift = index * ARROW_VERTICAL_SPACING;
 
   const cx = (start.x + end.x) / 2;
-  const cy = Math.min(start.y, end.y) - Math.abs(curvature);
+  const cy = Math.min(start.y, end.y) - curvature - verticalLift;
 
-  return `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`;
+  return `M ${start.x} ${start.y}
+          Q ${cx} ${cy}
+            ${end.x} ${end.y}`;
 }
 
-/* ===============================
-   Render arrows
-   =============================== */
-
-function renderArrows(arrows) {
-  return arrows.map(arrow => {
-    const start = resolveAnchor(arrow.from, "from");
-    const end   = resolveAnchor(arrow.to, "to");
-
+function renderArrows() {
+  return ast.arrows.map((a, i) => {
+    const start = resolveTarget(a.from);
+    const end = resolveTarget(a.to);
     if (!start || !end) return "";
 
     return `
-      <path
-        d="${arrowPath(start, end)}"
-        stroke="black"
-        fill="none"
-        stroke-width="1.5"
-        marker-end="url(#arrowhead)" />
+      <path d="${arrowPath(start, end, i)}"
+            stroke="black"
+            fill="none"
+            stroke-width="1.5"
+            marker-end="url(#arrowhead)" />
     `;
   }).join("\n");
 }
@@ -211,15 +188,9 @@ function renderArrows(arrows) {
 const svg = `
 <svg width="750" height="420" xmlns="http://www.w3.org/2000/svg">
 
-  <!-- Arrows -->
-  ${renderArrows(ast.arrows)}
-
-  <!-- Bonds -->
-  ${renderBonds(molecules)}
-
-  <!-- Molecule labels (temporary) -->
-  ${renderLabels(reactantMolecules)}
-  ${renderLabels(productMolecules)}
+  ${renderArrows()}
+  ${renderBonds()}
+  ${renderAtoms()}
 
   <defs>
     <marker id="arrowhead" markerWidth="6" markerHeight="6"
@@ -232,4 +203,4 @@ const svg = `
 `;
 
 fs.writeFileSync(outputFile, svg);
-console.log(`Rendered ${outputFile}`);
+console.log("Rendered", outputFile);
