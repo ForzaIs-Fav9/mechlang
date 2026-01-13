@@ -1,0 +1,9 @@
+reaction {
+  reactants: CH3-Br + CN-
+  products: CH3-CN + Br-
+}
+
+steps:
+  - arrows:
+      CN: -> C
+      C-Br -> Br

@@ -8,7 +8,8 @@ export function parseMechlang(text) {
 
   const ast = {
     reaction: null,
-    arrows: []
+    arrows: null,
+    steps: null
   };
 
   let i = 0;
@@ -16,9 +17,12 @@ export function parseMechlang(text) {
   while (i < lines.length) {
     const line = lines[i];
 
+    /* ===============================
+       Reaction block
+       =============================== */
     if (line.startsWith("reaction")) {
       const reactantsLine = lines[i + 1];
-      const productsLine = lines[i + 2];
+      const productsLine  = lines[i + 2];
 
       const reactants = reactantsLine
         .split(":")[1]
@@ -35,19 +39,54 @@ export function parseMechlang(text) {
       continue;
     }
 
-    if (line.startsWith("arrow")) {
-      const inside = line.slice(
-        line.indexOf("(") + 1,
-        line.lastIndexOf(")")
-      );
+    /* ===============================
+       Legacy arrows (v0.6 and below)
+       =============================== */
+    if (line.startsWith("arrows:")) {
+      ast.arrows = [];
+      i++;
 
-      const parts = inside.split(",").map(p => p.trim());
+      while (i < lines.length && lines[i].includes("->")) {
+        const [from, to] = lines[i].split("->").map(s => s.trim());
+        ast.arrows.push({
+          style: "curved",
+          from,
+          to
+        });
+        i++;
+      }
+      continue;
+    }
 
-      const style = parts[0];
-      const from = parts[1].split("=")[1];
-      const to = parts[2].split("=")[1];
+    /* ===============================
+       Steps block (v0.7)
+       =============================== */
+    if (line.startsWith("steps:")) {
+      ast.steps = [];
+      i++;
 
-      ast.arrows.push({ style, from, to });
+      while (i < lines.length && lines[i].startsWith("-")) {
+        // Expect: - arrows:
+        if (!lines[i].includes("arrows")) {
+          throw new Error("Expected '- arrows:' inside steps");
+        }
+
+        const step = { arrows: [] };
+        i++;
+
+        while (i < lines.length && lines[i].includes("->")) {
+          const [from, to] = lines[i].split("->").map(s => s.trim());
+          step.arrows.push({
+            style: "curved",
+            from,
+            to
+          });
+          i++;
+        }
+
+        ast.steps.push(step);
+      }
+      continue;
     }
 
     i++;
@@ -55,8 +94,3 @@ export function parseMechlang(text) {
 
   return ast;
 }
-
-//const input = fs.readFileSync("examples/sn2.mech", "utf-8");
-//const ast = parseMechlang(input);
-
-//console.log(JSON.stringify(ast, null, 2));
