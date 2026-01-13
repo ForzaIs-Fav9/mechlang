@@ -1,95 +1,123 @@
-import fs from "fs";
+// src/parse.js
 
-export function parseMechlang(text) {
-  const lines = text
+export function parseMechlang(input) {
+  const lines = input
     .split("\n")
     .map(l => l.trim())
-    .filter(l => l.length > 0);
+    .filter(Boolean);
 
   const ast = {
-    reaction: null,
-    arrows: null,
-    steps: null
+    reaction: {
+      reactants: [],
+      products: []
+    },
+    arrows: [],
+    steps: []
   };
 
   let i = 0;
+  let currentStep = null;
+
+  function expect(condition, msg) {
+    if (!condition) throw new Error(msg);
+  }
 
   while (i < lines.length) {
     const line = lines[i];
 
     /* ===============================
-       Reaction block
+       reaction { ... }
        =============================== */
-    if (line.startsWith("reaction")) {
-      const reactantsLine = lines[i + 1];
-      const productsLine  = lines[i + 2];
+    if (line === "reaction {") {
+      i++;
+      while (lines[i] !== "}") {
+        if (lines[i].startsWith("reactants:")) {
+          ast.reaction.reactants =
+            lines[i].replace("reactants:", "")
+              .split("+")
+              .map(s => s.trim());
+        }
 
-      const reactants = reactantsLine
-        .split(":")[1]
-        .split("+")
-        .map(r => r.trim());
+        if (lines[i].startsWith("products:")) {
+          ast.reaction.products =
+            lines[i].replace("products:", "")
+              .split("+")
+              .map(s => s.trim());
+        }
 
-      const products = productsLine
-        .split(":")[1]
-        .split("+")
-        .map(p => p.trim());
-
-      ast.reaction = { reactants, products };
-      i += 4;
+        i++;
+      }
+      i++;
       continue;
     }
 
     /* ===============================
-       Legacy arrows (v0.6 and below)
+       step <name> { ... }
        =============================== */
-    if (line.startsWith("arrows:")) {
-      ast.arrows = [];
-      i++;
+    if (line.startsWith("step ")) {
+      const name = line.replace("step", "").replace("{", "").trim();
 
-      while (i < lines.length && lines[i].includes("->")) {
-        const [from, to] = lines[i].split("->").map(s => s.trim());
-        ast.arrows.push({
-          style: "curved",
-          from,
-          to
-        });
-        i++;
-      }
+      currentStep = {
+        name,
+        arrows: []
+      };
+
+      ast.steps.push(currentStep);
+      i++;
       continue;
     }
 
     /* ===============================
-       Steps block (v0.7)
+       end of step
        =============================== */
-    if (line.startsWith("steps:")) {
-      ast.steps = [];
+    if (line === "}" && currentStep) {
+      currentStep = null;
       i++;
+      continue;
+    }
 
-      while (i < lines.length && lines[i].startsWith("-")) {
-        // Expect: - arrows:
-        if (!lines[i].includes("arrows")) {
-          throw new Error("Expected '- arrows:' inside steps");
-        }
+    /* ===============================
+       arrow(...)
+       =============================== */
+    if (line.startsWith("arrow(")) {
+      const inner = line.slice(6, -1);
+      const parts = inner.split(",").map(p => p.trim());
 
-        const step = { arrows: [] };
-        i++;
-
-        while (i < lines.length && lines[i].includes("->")) {
-          const [from, to] = lines[i].split("->").map(s => s.trim());
-          step.arrows.push({
-            style: "curved",
-            from,
-            to
-          });
-          i++;
-        }
-
-        ast.steps.push(step);
+      const arrow = {};
+      for (const part of parts) {
+        const [k, v] = part.split("=").map(s => s.trim());
+        arrow[k] = v;
       }
+
+      if (currentStep) {
+        currentStep.arrows.push(arrow);
+      } else {
+        ast.arrows.push(arrow);
+      }
+
+      i++;
       continue;
     }
 
     i++;
+  }
+
+  /* ===============================
+     SAFETY NORMALIZATION
+     =============================== */
+
+  if (!Array.isArray(ast.arrows)) {
+    ast.arrows = [];
+  }
+
+  if (!Array.isArray(ast.steps)) {
+    ast.steps = [];
+  }
+
+  for (const step of ast.steps) {
+    if (!Array.isArray(step.arrows)) {
+      step.arrows = [];
+    }
   }
 
   return ast;

@@ -165,10 +165,15 @@ function arrowPath(start, end, index) {
             ${end.x} ${end.y}`;
 }
 
-function renderArrows() {
-  return ast.arrows.map((a, i) => {
-    const start = resolveTarget(a.from);
-    const end = resolveTarget(a.to);
+function renderArrows(arrows) {
+  if (!Array.isArray(arrows)) {
+    console.warn("No arrows to render");
+    return "";
+  }
+
+  return arrows.map((a, i) => {
+    const start = resolveArrowTarget(a.from, "from");
+    const end   = resolveArrowTarget(a.to, "to");
     if (!start || !end) return "";
 
     return `
@@ -180,6 +185,7 @@ function renderArrows() {
     `;
   }).join("\n");
 }
+
 
 /* ===============================
    SVG
