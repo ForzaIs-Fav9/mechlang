@@ -2,7 +2,7 @@ import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
 /* ===============================
-   Atom templates (visual-only)
+   Atom templates (visual only)
    =============================== */
 
 const atomTemplates = {
@@ -81,15 +81,17 @@ function buildMolecules(list, xBase, yBase) {
       };
     }
 
-    const bonds = (template.bonds || []).map(([a, b]) => {
-      if (!atoms[a] || !atoms[b]) return null;
-      return {
-        x1: atoms[a].x,
-        y1: atoms[a].y,
-        x2: atoms[b].x,
-        y2: atoms[b].y
-      };
-    }).filter(Boolean);
+    const bonds = (template.bonds || [])
+      .map(([a, b]) => {
+        if (!atoms[a] || !atoms[b]) return null;
+        return {
+          x1: atoms[a].x,
+          y1: atoms[a].y,
+          x2: atoms[b].x,
+          y2: atoms[b].y
+        };
+      })
+      .filter(Boolean);
 
     return { name, base, atoms, bonds };
   });
@@ -110,12 +112,14 @@ const productMolecules = buildMolecules(
 const molecules = [...reactantMolecules, ...productMolecules];
 
 /* ===============================
-   Label rendering (temporary)
+   Temporary molecule labels
    =============================== */
 
-function renderLabels(list) {
-  return list.map(mol =>
-    `<text x="${mol.base.x}" y="${mol.base.y}" font-size="16">${mol.name}</text>`
+function renderLabels(molecules) {
+  return molecules.map(mol =>
+    `<text x="${mol.base.x - 20}" y="${mol.base.y + 20}" font-size="16">
+      ${mol.name}
+     </text>`
   ).join("\n");
 }
 
@@ -160,7 +164,7 @@ function resolveAnchor(target, direction) {
     }
   }
 
-  console.warn("Could not resolve anchor:", target);
+  console.warn("Unresolved arrow anchor:", target);
   return null;
 }
 
