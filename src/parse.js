@@ -1,15 +1,17 @@
-export function parseMechlang(text) {
-  const lines = text
+export function parseMechlang(input) {
+  const lines = input
     .split("\n")
     .map(l => l.trim())
-    .filter(l => l.length > 0);
+    .filter(Boolean);
 
   const ast = {
-    reaction: null,
+    reaction: { reactants: [], products: [] },
+    arrows: [],
     steps: []
   };
 
   let i = 0;
+  let currentStep = null;
 
   while (i < lines.length) {
     const line = lines[i];
@@ -18,71 +20,66 @@ export function parseMechlang(text) {
        Reaction block
        =============================== */
     if (line.startsWith("reaction")) {
-      const reactantsLine = lines[i + 1];
-      const productsLine  = lines[i + 2];
-
-      const reactants = reactantsLine
-        .split(":")[1]
-        .split("+")
-        .map(r => r.trim());
-
-      const products = productsLine
-        .split(":")[1]
-        .split("+")
-        .map(p => p.trim());
-
-      ast.reaction = { reactants, products };
-      i += 4;
-      continue;
-    }
-
-    /* ===============================
-       Step block (STRICT)
-       =============================== */
-    if (line.startsWith("step")) {
-      const step = { arrows: [] };
-      i++; // move into step block
-
+      i++;
       while (i < lines.length && !lines[i].startsWith("}")) {
         const l = lines[i];
 
-        if (l.startsWith("arrow")) {
-          const inside = l.slice(
-            l.indexOf("(") + 1,
-            l.lastIndexOf(")")
-          );
+        if (l.startsWith("reactants:")) {
+          ast.reaction.reactants =
+            l.replace("reactants:", "")
+             .split(",")
+             .map(s => s.trim());
+        }
 
-          const parts = inside.split(",").map(p => p.trim());
-
-          const style = parts[0];
-          const from  = parts.find(p => p.startsWith("from="))?.split("=")[1];
-          const to    = parts.find(p => p.startsWith("to="))?.split("=")[1];
-
-          if (!from || !to) {
-            console.warn("Malformed arrow:", l);
-          } else {
-            step.arrows.push({ style, from, to });
-          }
+        if (l.startsWith("products:")) {
+          ast.reaction.products =
+            l.replace("products:", "")
+             .split(",")
+             .map(s => s.trim());
         }
 
         i++;
       }
-
-      ast.steps.push(step);
-      i++; // skip closing }
-      continue;
     }
 
     /* ===============================
-       Illegal arrows (STRICT MODE)
+       Step block
        =============================== */
-    if (line.startsWith("arrow")) {
-      throw new Error(
-        "Arrow must be inside step { } (v0.6 strict mode)"
-      );
+    else if (line.startsWith("step")) {
+      currentStep = {
+        arrows: []
+      };
+      ast.steps.push(currentStep);
+    }
+
+    /* ===============================
+       Arrow syntax
+       =============================== */
+    else if (line.startsWith("arrow")) {
+      const match = line.match(/from\s*=\s*([^,]+),\s*to\s*=\s*([^)]+)/);
+      if (match) {
+        const arrow = {
+          style: "curved",
+          from: match[1].trim(),
+          to: match[2].trim()
+        };
+
+        if (currentStep) {
+          currentStep.arrows.push(arrow);
+        } else {
+          ast.arrows.push(arrow);
+        }
+      }
     }
 
     i++;
+  }
+
+  /* ===============================
+     Flatten arrows
+     =============================== */
+  if (ast.steps.length > 0) {
+    ast.arrows = ast.steps.flatMap(step => step.arrows);
   }
 
   return ast;
