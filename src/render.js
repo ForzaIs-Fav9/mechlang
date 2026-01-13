@@ -6,7 +6,6 @@ import { parseMechlang } from "./parse.js";
    =============================== */
 
 const SHOW_MOLECULE_LABELS = false;
-const ARROW_VERTICAL_SPACING = 22;
 
 /* ===============================
    Atom templates (visual only)
@@ -14,23 +13,32 @@ const ARROW_VERTICAL_SPACING = 22;
 
 const atomTemplates = {
   "CH3-Br": {
-    atoms: { C: { x: 0, y: 0 }, Br: { x: 40, y: 0 } },
+    atoms: {
+      C:  { x: 0,  y: 0 },
+      Br: { x: 40, y: 0 }
+    },
     bonds: [["C", "Br"]]
   },
 
   "OH-": {
-    atoms: { O: { x: 0, y: 0 }, H: { x: 20, y: 0 } },
+    atoms: {
+      O: { x: 0,  y: 0 },
+      H: { x: 20, y: 0 }
+    },
     bonds: [["O", "H"]]
   },
 
   "CN-": {
-    atoms: { C: { x: 0, y: 0 }, N: { x: -25, y: 0 } },
+    atoms: {
+      C: { x: 0,   y: 0 },
+      N: { x: -25, y: 0 }
+    },
     bonds: [["C", "N"]]
   },
 
   "CH3-OH": {
     atoms: {
-      C: { x: 0, y: 0 },
+      C: { x: 0,  y: 0 },
       O: { x: 40, y: 0 },
       H: { x: 60, y: 0 }
     },
@@ -42,8 +50,9 @@ const atomTemplates = {
    IO
    =============================== */
 
-const inputFile = process.argv[2] || "examples/sn2.mech";
+const inputFile = process.argv[2] || "examples/sn2_steps.mech";
 const input = fs.readFileSync(inputFile, "utf-8");
+
 const outputFile =
   "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
 
@@ -58,8 +67,8 @@ const ast = parseMechlang(input);
    =============================== */
 
 const layout = {
-  reactants: { x: 120, y: 150, gap: 60 },
-  products: { x: 520, y: 150, gap: 60 }
+  reactants: { x: 120, y: 150, gap: 80 },
+  products:  { x: 520, y: 150, gap: 80 }
 };
 
 /* ===============================
@@ -79,33 +88,46 @@ function buildMolecules(list, xBase, yBase) {
       };
     }
 
-    const bonds = template.bonds
-      .map(([a, b]) => ({
-        a, b,
-        x1: atoms[a].x,
-        y1: atoms[a].y,
-        x2: atoms[b].x,
-        y2: atoms[b].y,
-        mx: (atoms[a].x + atoms[b].x) / 2,
-        my: (atoms[a].y + atoms[b].y) / 2
-      }));
+    const bonds = (template.bonds || [])
+      .map(([a, b]) => {
+        if (!atoms[a] || !atoms[b]) return null;
+        return {
+          a, b,
+          x1: atoms[a].x,
+          y1: atoms[a].y,
+          x2: atoms[b].x,
+          y2: atoms[b].y,
+          mx: (atoms[a].x + atoms[b].x) / 2,
+          my: (atoms[a].y + atoms[b].y) / 2
+        };
+      })
+      .filter(Boolean);
 
     return { name, base, atoms, bonds };
   });
 }
 
-const molecules = [
-  ...buildMolecules(ast.reaction.reactants, layout.reactants.x, layout.reactants.y),
-  ...buildMolecules(ast.reaction.products, layout.products.x, layout.products.y)
-];
+const reactantMolecules = buildMolecules(
+  ast.reaction.reactants,
+  layout.reactants.x,
+  layout.reactants.y
+);
+
+const productMolecules = buildMolecules(
+  ast.reaction.products,
+  layout.products.x,
+  layout.products.y
+);
+
+const molecules = [...reactantMolecules, ...productMolecules];
 
 /* ===============================
    Rendering helpers
    =============================== */
 
-function renderBonds() {
-  return molecules.flatMap(m =>
-    m.bonds.map(b =>
+function renderBonds(molecules) {
+  return molecules.flatMap(mol =>
+    mol.bonds.map(b =>
       `<line x1="${b.x1}" y1="${b.y1}"
              x2="${b.x2}" y2="${b.y2}"
              stroke="black" stroke-width="1.5" />`
@@ -113,9 +135,9 @@ function renderBonds() {
   ).join("\n");
 }
 
-function renderAtoms() {
-  return molecules.flatMap(m =>
-    Object.entries(m.atoms).map(([sym, pos]) =>
+function renderAtoms(molecules) {
+  return molecules.flatMap(mol =>
+    Object.entries(mol.atoms).map(([sym, pos]) =>
       `<text x="${pos.x}" y="${pos.y + 5}"
              font-size="14"
              text-anchor="middle"
@@ -124,55 +146,63 @@ function renderAtoms() {
   ).join("\n");
 }
 
+function renderMoleculeLabels(molecules) {
+  if (!SHOW_MOLECULE_LABELS) return "";
+  return molecules.map(m =>
+    `<text x="${m.base.x}" y="${m.base.y + 20}" font-size="12">${m.name}</text>`
+  ).join("\n");
+}
+
 /* ===============================
-   Arrow anchor resolution
+   Anchor resolution (v0.6)
    =============================== */
 
-function resolveTarget(target) {
+function resolveArrowTarget(target) {
   const clean = target.replace(":", "");
 
+  // Bond target (C-Br)
   if (clean.includes("-")) {
     const [a, b] = clean.split("-");
-    for (const m of molecules) {
-      const bond = m.bonds.find(
+    for (const mol of molecules) {
+      const bond = mol.bonds.find(
         bd => (bd.a === a && bd.b === b) || (bd.a === b && bd.b === a)
       );
       if (bond) return { x: bond.mx, y: bond.my };
     }
   }
 
-  for (const m of molecules) {
-    if (m.atoms[clean]) return m.atoms[clean];
+  // Atom target
+  if (/^[A-Z][a-z]?$/.test(clean)) {
+    for (const mol of molecules) {
+      if (mol.atoms[clean]) return mol.atoms[clean];
+    }
   }
 
+  console.warn("Unresolved arrow target:", target);
   return null;
 }
 
 /* ===============================
-   Arrow geometry (v0.6)
+   Arrow geometry
    =============================== */
 
-function arrowPath(start, end, index) {
+function arrowPath(start, end) {
   const dx = end.x - start.x;
-  const curvature = Math.sign(dx || 1) * (70 + index * 10);
-  const verticalLift = index * ARROW_VERTICAL_SPACING;
+  const curvature = Math.sign(dx || 1) * 80;
 
   const cx = (start.x + end.x) / 2;
-  const cy = Math.min(start.y, end.y) - curvature - verticalLift;
+  const cy = Math.min(start.y, end.y) - Math.abs(curvature);
 
-  return `M ${start.x} ${start.y}
-          Q ${cx} ${cy}
-            ${end.x} ${end.y}`;
+  return `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`;
 }
 
-function renderArrows() {
-  return ast.arrows.map((a, i) => {
-    const start = resolveTarget(a.from);
-    const end = resolveTarget(a.to);
+function renderArrows(arrows) {
+  return arrows.map(a => {
+    const start = resolveArrowTarget(a.from);
+    const end   = resolveArrowTarget(a.to);
     if (!start || !end) return "";
-
     return `
-      <path d="${arrowPath(start, end, i)}"
+      <path d="${arrowPath(start, end)}"
             stroke="black"
             fill="none"
             stroke-width="1.5"
@@ -182,15 +212,23 @@ function renderArrows() {
 }
 
 /* ===============================
-   SVG
+   SVG (STEP-AWARE)
    =============================== */
 
 const svg = `
 <svg width="750" height="420" xmlns="http://www.w3.org/2000/svg">
 
-  ${renderArrows()}
-  ${renderBonds()}
-  ${renderAtoms()}
+  <!-- Arrows (v0.6: step-based) -->
+  ${ast.steps.map(step => renderArrows(step.arrows)).join("\n")}
+
+  <!-- Bonds -->
+  ${renderBonds(molecules)}
+
+  <!-- Atom labels -->
+  ${renderAtoms(molecules)}
+
+  <!-- Debug molecule labels -->
+  ${renderMoleculeLabels(molecules)}
 
   <defs>
     <marker id="arrowhead" markerWidth="6" markerHeight="6"
@@ -203,4 +241,4 @@ const svg = `
 `;
 
 fs.writeFileSync(outputFile, svg);
-console.log("Rendered", outputFile);
+console.log(`Rendered ${outputFile}`);
