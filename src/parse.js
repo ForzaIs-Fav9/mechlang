@@ -5,81 +5,75 @@ export function parseMechlang(input) {
     .filter(Boolean);
 
   const ast = {
-    reaction: { reactants: [], products: [] },
-    arrows: [],
     steps: []
   };
 
   let i = 0;
-  let currentStep = null;
 
   while (i < lines.length) {
-    const line = lines[i];
-
-    /* ===============================
-       Reaction block
-       =============================== */
-    if (line.startsWith("reaction")) {
+    if (lines[i] === "step {") {
       i++;
-      while (i < lines.length && !lines[i].startsWith("}")) {
-        const l = lines[i];
+      const step = {
+        species: {},
+        arrows: []
+      };
 
-        if (l.startsWith("reactants:")) {
-          ast.reaction.reactants =
-            l.replace("reactants:", "")
-             .split(",")
-             .map(s => s.trim());
+      while (lines[i] !== "}") {
+        const line = lines[i];
+
+        // species block
+        if (line === "species:") {
+          i++;
+          while (!lines[i].startsWith("arrow") && !lines[i].startsWith("}")) {
+            const [key, value] = lines[i].split("=").map(s => s.trim());
+            step.species[key] = value;
+            i++;
+          }
+          continue;
         }
 
-        if (l.startsWith("products:")) {
-          ast.reaction.products =
-            l.replace("products:", "")
-             .split(",")
-             .map(s => s.trim());
+        // arrow(...)
+        if (line.startsWith("arrow(")) {
+          const arrow = {
+            kind: "curved",
+            from: null,
+            to: null
+          };
+
+          i++;
+          while (lines[i] !== ")") {
+            const l = lines[i].replace(",", "");
+
+            if (l === "curved") {
+              arrow.kind = "curved";
+            }
+
+            if (l.startsWith("from")) {
+              arrow.from = l.split("=").pop().trim();
+            }
+
+            if (l.startsWith("to")) {
+              arrow.to = l.split("=").pop().trim();
+            }
+
+            i++;
+          }
+
+          if (arrow.from && arrow.to) {
+            step.arrows.push(arrow);
+          }
+
+          i++; // skip ')'
+          continue;
         }
 
         i++;
       }
-    }
 
-    /* ===============================
-       Step block
-       =============================== */
-    else if (line.startsWith("step")) {
-      currentStep = {
-        arrows: []
-      };
-      ast.steps.push(currentStep);
-    }
-
-    /* ===============================
-       Arrow syntax
-       =============================== */
-    else if (line.startsWith("arrow")) {
-      const match = line.match(/from\s*=\s*([^,]+),\s*to\s*=\s*([^)]+)/);
-      if (match) {
-        const arrow = {
-          style: "curved",
-          from: match[1].trim(),
-          to: match[2].trim()
-        };
-
-        if (currentStep) {
-          currentStep.arrows.push(arrow);
-        } else {
-          ast.arrows.push(arrow);
-        }
-      }
+      ast.steps.push(step);
     }
 
     i++;
-  }
-
-  /* ===============================
-     Flatten arrows
-     =============================== */
-  if (ast.steps.length > 0) {
-    ast.arrows = ast.steps.flatMap(step => step.arrows);
   }
 
   return ast;
