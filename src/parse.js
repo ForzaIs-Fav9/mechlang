@@ -1,3 +1,5 @@
+// src/parse.js
+
 export function parseMechlang(input) {
   const lines = input
     .split("\n")
@@ -5,51 +7,45 @@ export function parseMechlang(input) {
     .filter(Boolean);
 
   const ast = {
+    reaction: null,
     steps: []
   };
 
-  let i = 0;
-
-  while (i < lines.length) {
-    if (lines[i] === "step {") {
-      i++;
-      const block = [];
-
-      while (lines[i] !== "}") {
-        block.push(lines[i]);
-        i++;
-      }
-
-      ast.steps.push(parseStep(block));
-    }
-
-    i++;
-  }
-
-  return ast;
-}
-
-function parseStep(lines) {
-  const step = {
-    species: {},
-    arrows: []
-  };
-
-  let inSpecies = false;
+  let currentStep = null;
 
   for (const line of lines) {
-    if (line.startsWith("species:")) {
-      inSpecies = true;
+
+    // ---------- STEP START ----------
+    if (line === "step {") {
+      currentStep = {
+        species: [],
+        arrows: []
+      };
       continue;
     }
 
-    if (inSpecies && line.includes("=")) {
-      const [role, molecule] = line.split("=").map(s => s.trim());
-      step.species[role] = molecule;
+    // ---------- STEP END ----------
+    if (line === "}") {
+      if (currentStep) {
+        ast.steps.push(currentStep);
+        currentStep = null;
+      }
       continue;
     }
 
-    if (line.startsWith("arrow")) {
+    // ---------- SPECIES ----------
+    if (currentStep && line.startsWith("species:")) {
+      const species = line
+        .replace("species:", "")
+        .split("+")
+        .map(s => s.trim());
+
+      currentStep.species = species;
+      continue;
+    }
+
+    // ---------- ARROW ----------
+    if (currentStep && line.startsWith("arrow(")) {
       const args = {};
 
       line
@@ -58,15 +54,19 @@ function parseStep(lines) {
         .split(",")
         .map(p => p.trim())
         .forEach(p => {
-          if (!p.includes("=")) return; // ← ignore flags like 'curved'
+          if (!p.includes("=")) return; // ignore flags like "curved"
           const [k, v] = p.split("=").map(s => s.trim());
           args[k] = v;
         });
 
+      currentStep.arrows.push({
+        from: args.from,
+        to: args.to
+      });
 
-      step.arrows.push(args);
+      continue;
     }
   }
 
-  return step;
+  return ast;
 }
