@@ -1,9 +1,4 @@
-reaction {
-  reactants: CH3-Br + CN-
-  products: CH3-CN + Br-
-}
-
 step {
-  arrow(curved, from=CN:, to=C)
-  arrow(curved, from=C-Br, to=Br)
+  species: CH3-Br + CN-
+  arrow(curved, from=CN:, to=C-Br)
 }
