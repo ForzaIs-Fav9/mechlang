@@ -1,4 +1,11 @@
 step {
-  species: CH3-Br + CN-
-  arrow(curved, from=CN:, to=C-Br)
+  species:
+    nucleophile = CN-
+    electrophile = CH3-Br
+
+  arrow(
+    curved,
+    from = nucleophile.C,
+    to   = electrophile.C-Br
+  )
 }
