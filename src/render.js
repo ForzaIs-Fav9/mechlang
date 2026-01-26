@@ -2,6 +2,12 @@ import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
 /* ===============================
+   Config
+   =============================== */
+
+const SHOW_MOLECULE_LABELS = false;
+
+/* ===============================
    Atom templates (visual only)
    =============================== */
 
@@ -10,13 +16,10 @@ const atomTemplates = {
     atoms: { C: { x: 0, y: 0 }, Br: { x: 40, y: 0 } },
     bonds: [["C", "Br"]]
   },
+
   "CN-": {
     atoms: { C: { x: 0, y: 0 }, N: { x: -25, y: 0 } },
     bonds: [["C", "N"]]
-  },
-  "CH3-OH": {
-    atoms: { C: { x: 0, y: 0 }, O: { x: 40, y: 0 }, H: { x: 60, y: 0 } },
-    bonds: [["C", "O"], ["O", "H"]]
   }
 };
 
@@ -25,40 +28,37 @@ const atomTemplates = {
    =============================== */
 
 const inputFile = process.argv[2];
-if (!inputFile) {
-  console.error("Usage: node src/render.js <input-file.mech>");
-  process.exit(1);
-}
 const input = fs.readFileSync(inputFile, "utf-8");
-const outputFile =
-  "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
+const outputFile = "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
+
+/* ===============================
+   Parse
+   =============================== */
 
 const ast = parseMechlang(input);
 
 /* ===============================
-   Layout constants
+   Layout
    =============================== */
 
-const STEP_Y_GAP = 140;
-const BASE_X = 160;
+const layout = {
+  x: 150,
+  y: 150,
+  gap: 80
+};
 
 /* ===============================
-   Molecule builder
+   Build molecules
    =============================== */
 
-function buildMolecules(species, yBase) {
-  return (species || []).map((name, i) => {
+function buildMolecules(step) {
+  return Object.values(step.species).map((name, i) => {
     const template = atomTemplates[name];
-    if (!template) {
-      // unknown template: skip but warn so user can add template or species
-      console.warn(`No atom template for species: ${name}`);
-      return null;
-    }
+    if (!template) return null;
 
-    const base = { x: BASE_X, y: yBase + i * 40 };
+    const base = { x: layout.x, y: layout.y + i * layout.gap };
+
     const atoms = {};
-    const bonds = [];
-
     for (const a in template.atoms) {
       atoms[a] = {
         x: base.x + template.atoms[a].x,
@@ -66,84 +66,43 @@ function buildMolecules(species, yBase) {
       };
     }
 
-    for (const [a, b] of (template.bonds || [])) {
-      if (!atoms[a] || !atoms[b]) continue;
-      bonds.push({
-        a, b,
-        x1: atoms[a].x,
-        y1: atoms[a].y,
-        x2: atoms[b].x,
-        y2: atoms[b].y,
-        mx: (atoms[a].x + atoms[b].x) / 2,
-        my: (atoms[a].y + atoms[b].y) / 2
-      });
-    }
+    const bonds = template.bonds.map(([a, b]) => ({
+      a,
+      b,
+      x1: atoms[a].x,
+      y1: atoms[a].y,
+      x2: atoms[b].x,
+      y2: atoms[b].y,
+      mx: (atoms[a].x + atoms[b].x) / 2,
+      my: (atoms[a].y + atoms[b].y) / 2
+    }));
 
     return { name, atoms, bonds };
   }).filter(Boolean);
 }
 
 /* ===============================
-   Token canonicalization
+   Arrow resolution (v0.7)
    =============================== */
 
-function normalizeToken(tok) {
-  if (!tok) return "";
-  return tok.replace(/[:+\s]/g, "").trim(); // remove colons, pluses, whitespace
-}
+function resolveArrowTarget(target, step, molecules) {
+  const [role, selector] = target.split(".");
+  const moleculeName = step.species[role];
 
-function canonicalAtom(token) {
-  // token might be "CN", "CN-", "OH", "C", "Br", etc.
-  const cleaned = (token || "").replace(/[-:]/g, "").trim(); // remove '-' and ':'
-  const t = cleaned; // e.g. "CN", "OH", "C", "Br"
+  if (!moleculeName) return null;
 
-  // common maps (expandable)
-  const map = {
-    CN: "C",
-    OH: "O"
-    // add more shorthand -> anchor mappings here if needed
-  };
+  const mol = molecules.find(m => m.name === moleculeName);
+  if (!mol) return null;
 
-  if (map[t]) return map[t];
-  if (/^[A-Z][a-z]?$/.test(t)) return t; // valid atom symbol (C, N, O, Br, Cl ...)
-  return null;
-}
-
-/* ===============================
-   Resolve arrow target (robust)
-   =============================== */
-
-function resolveTarget(rawTarget, molecules) {
-  if (!rawTarget) return null;
-  const clean = rawTarget.replace(/\s+/g, ""); // trim spaces
-
-  // ---- bond target (e.g., "C-Br" or "C-Br:")
-  if (clean.includes("-")) {
-    const [rawA, rawB] = clean.split("-");
-    const aSym = canonicalAtom(rawA);
-    const bSym = canonicalAtom(rawB);
-    if (!aSym || !bSym) {
-      // cannot canonicalize parts
-      console.warn("Cannot canonicalize bond parts:", rawA, rawB);
-      return null;
-    }
-    for (const mol of molecules) {
-      const bd = mol.bonds.find(b => (b.a === aSym && b.b === bSym) || (b.a === bSym && b.b === aSym));
-      if (bd) return { x: bd.mx, y: bd.my };
-    }
+  if (selector.includes("-")) {
+    const [a, b] = selector.split("-");
+    const bond = mol.bonds.find(
+      bd => (bd.a === a && bd.b === b) || (bd.a === b && bd.b === a)
+    );
+    return bond ? { x: bond.mx, y: bond.my } : null;
   }
 
-  // ---- atom-like target (including mapped tokens like "CN" -> "C")
-  const atomSym = canonicalAtom(clean.replace(/[:-]/g, ""));
-  if (atomSym) {
-    for (const mol of molecules) {
-      if (mol.atoms[atomSym]) return mol.atoms[atomSym];
-    }
-  }
-
-  // Not found
-  console.warn("Unresolved arrow target:", rawTarget);
-  return null;
+  return mol.atoms[selector] || null;
 }
 
 /* ===============================
@@ -152,68 +111,60 @@ function resolveTarget(rawTarget, molecules) {
 
 function arrowPath(start, end) {
   const cx = (start.x + end.x) / 2;
-  const cy = Math.min(start.y, end.y) - 80;
+  const cy = Math.min(start.y, end.y) - 60;
   return `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`;
 }
 
 /* ===============================
-   Render steps
+   Rendering
    =============================== */
 
-let svgContent = "";
-let yOffset = 80;
+function renderStep(step) {
+  const molecules = buildMolecules(step);
 
-if (!ast.steps || ast.steps.length === 0) {
-  console.warn("No steps to render in AST; make sure your file uses 'step { ... }' blocks");
+  const bonds = molecules.flatMap(m =>
+    m.bonds.map(b =>
+      `<line x1="${b.x1}" y1="${b.y1}"
+             x2="${b.x2}" y2="${b.y2}"
+             stroke="black" />`
+    )
+  ).join("");
+
+  const atoms = molecules.flatMap(m =>
+    Object.entries(m.atoms).map(([s, p]) =>
+      `<text x="${p.x}" y="${p.y + 5}"
+             font-size="14"
+             text-anchor="middle">${s}</text>`
+    )
+  ).join("");
+
+  const arrows = step.arrows.map(a => {
+    const start = resolveArrowTarget(a.from, step, molecules);
+    const end = resolveArrowTarget(a.to, step, molecules);
+    if (!start || !end) return "";
+    return `<path d="${arrowPath(start, end)}"
+                  stroke="black"
+                  fill="none"
+                  marker-end="url(#arrowhead)" />`;
+  }).join("");
+
+  return bonds + atoms + arrows;
 }
 
-ast.steps.forEach((step, si) => {
-  const molecules = buildMolecules(step.species, yOffset);
-
-  // draw bonds and atom labels
-  for (const m of molecules) {
-    for (const b of m.bonds) {
-      svgContent += `<line x1="${b.x1}" y1="${b.y1}" x2="${b.x2}" y2="${b.y2}" stroke="black" stroke-width="1.5"/>`;
-    }
-    for (const [sym, pos] of Object.entries(m.atoms)) {
-      svgContent += `<text x="${pos.x}" y="${pos.y + 5}" font-size="14" text-anchor="middle" font-family="serif">${sym}</text>`;
-    }
-  }
-
-  // render arrows for this step
-  for (const a of step.arrows || []) {
-    const start = resolveTarget(a.from, molecules);
-    const end   = resolveTarget(a.to, molecules);
-
-    if (!start || !end) {
-      // skip arrow if unresolved (we already warn inside resolveTarget)
-      continue;
-    }
-
-    svgContent += `
-      <path d="${arrowPath(start, end)}" stroke="black" fill="none" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-    `;
-  }
-
-  // step separator (optional visual cue) -- small label
-  svgContent += `<text x="40" y="${yOffset + 6}" font-size="12" font-family="serif">step ${si+1}</text>`;
-
-  yOffset += STEP_Y_GAP;
-});
-
 /* ===============================
-   Final SVG
+   SVG
    =============================== */
 
 const svg = `
-<svg width="900" height="${Math.max(420, yOffset + 40)}" xmlns="http://www.w3.org/2000/svg">
+<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <marker id="arrowhead" markerWidth="6" markerHeight="6"
             refX="5" refY="3" orient="auto">
       <polygon points="0 0, 6 3, 0 6" fill="black"/>
     </marker>
   </defs>
-  ${svgContent}
+
+  ${ast.steps.map(renderStep).join("")}
 </svg>
 `;
 
