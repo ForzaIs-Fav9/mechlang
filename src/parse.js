@@ -56,10 +56,13 @@ function parseStep(lines) {
         .replace("arrow(", "")
         .replace(")", "")
         .split(",")
+        .map(p => p.trim())
         .forEach(p => {
+          if (!p.includes("=")) return; // ← ignore flags like 'curved'
           const [k, v] = p.split("=").map(s => s.trim());
           args[k] = v;
         });
+
 
       step.arrows.push(args);
     }
