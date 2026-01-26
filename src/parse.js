@@ -1,84 +1,69 @@
-export function parseMechlang(text) {
-  const lines = text
+export function parseMechlang(input) {
+  const lines = input
     .split("\n")
     .map(l => l.trim())
     .filter(Boolean);
 
   const ast = {
-    reaction: null,
-    steps: [],
-    arrows: []
+    steps: []
   };
 
   let i = 0;
 
   while (i < lines.length) {
-    const line = lines[i];
-
-    /* ===============================
-       reaction block (unchanged)
-       =============================== */
-    if (line.startsWith("reaction")) {
-      const reactants = lines[i + 1]
-        .split(":")[1]
-        .split("+")
-        .map(s => s.trim());
-
-      const products = lines[i + 2]
-        .split(":")[1]
-        .split("+")
-        .map(s => s.trim());
-
-      ast.reaction = { reactants, products };
-      i += 4;
-      continue;
-    }
-
-    /* ===============================
-       step block (NEW)
-       =============================== */
-    if (line === "step {") {
-      const step = {
-        species: [],
-        arrows: []
-      };
-
+    if (lines[i] === "step {") {
       i++;
+      const block = [];
 
       while (lines[i] !== "}") {
-        const l = lines[i];
-
-        if (l.startsWith("species:")) {
-          step.species = l
-            .split(":")[1]
-            .split("+")
-            .map(s => s.trim());
-        }
-
-        if (l.startsWith("arrow")) {
-          const inside = l.slice(
-            l.indexOf("(") + 1,
-            l.lastIndexOf(")")
-          );
-
-          const parts = inside.split(",").map(p => p.trim());
-          const style = parts[0];
-          const from = parts.find(p => p.startsWith("from="))?.split("=")[1];
-          const to   = parts.find(p => p.startsWith("to="))?.split("=")[1];
-
-          step.arrows.push({ style, from, to });
-        }
-
+        block.push(lines[i]);
         i++;
       }
 
-      ast.steps.push(step);
-      i++;
-      continue;
+      ast.steps.push(parseStep(block));
     }
 
     i++;
   }
 
   return ast;
+}
+
+function parseStep(lines) {
+  const step = {
+    species: {},
+    arrows: []
+  };
+
+  let inSpecies = false;
+
+  for (const line of lines) {
+    if (line.startsWith("species:")) {
+      inSpecies = true;
+      continue;
+    }
+
+    if (inSpecies && line.includes("=")) {
+      const [role, molecule] = line.split("=").map(s => s.trim());
+      step.species[role] = molecule;
+      continue;
+    }
+
+    if (line.startsWith("arrow")) {
+      const args = {};
+
+      line
+        .replace("arrow(", "")
+        .replace(")", "")
+        .split(",")
+        .forEach(p => {
+          const [k, v] = p.split("=").map(s => s.trim());
+          args[k] = v;
+        });
+
+      step.arrows.push(args);
+    }
+  }
+
+  return step;
 }
