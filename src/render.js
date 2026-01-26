@@ -86,7 +86,11 @@ function buildMolecules(step) {
    =============================== */
 
 function resolveArrowTarget(target, step, molecules) {
-  const [role, selector] = target.split(".");
+  if (!target || !target.includes(".")) {
+  console.warn("Invalid arrow target:", target);
+  return null;
+}
+   const [role, selector] = target.split(".");
   const moleculeName = step.species[role];
 
   if (!moleculeName) return null;
