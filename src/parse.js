@@ -28,7 +28,7 @@ export function parseMechlang(input) {
         }
 
         // --- arrow block ---
-        if (lines[i].startsWith("arrow")) {
+        if (lines[i].startsWith("arrow(")) {
           i++; // skip "arrow("
           const arrow = {};
 
