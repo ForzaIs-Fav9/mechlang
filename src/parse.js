@@ -1,72 +1,96 @@
-// src/parse.js
-
 export function parseMechlang(input) {
   const lines = input
     .split("\n")
     .map(l => l.trim())
     .filter(Boolean);
 
-  const ast = {
-    reaction: null,
-    steps: []
-  };
+  const steps = [];
+  let i = 0;
 
-  let currentStep = null;
-
-  for (const line of lines) {
-
-    // ---------- STEP START ----------
-    if (line === "step {") {
-      currentStep = {
-        species: [],
+  while (i < lines.length) {
+    if (lines[i] === "step {") {
+      i++;
+      const step = {
+        species: {},
         arrows: []
       };
-      continue;
-    }
 
-    // ---------- STEP END ----------
-    if (line === "}") {
-      if (currentStep) {
-        ast.steps.push(currentStep);
-        currentStep = null;
+      while (lines[i] !== "}") {
+        // --- species block ---
+        if (lines[i] === "species:") {
+          i++;
+          while (!lines[i].startsWith("arrow") && lines[i] !== "}") {
+            const [key, value] = lines[i].split("=").map(s => s.trim());
+            step.species[key] = value;
+            i++;
+          }
+          continue;
+        }
+
+        // --- arrow block ---
+        if (lines[i].startsWith("arrow")) {
+          i++; // skip "arrow("
+          const arrow = {};
+
+          while (!lines[i].startsWith(")")) {
+            const line = lines[i].replace(",", "");
+            if (line === "curved") arrow.type = "curved";
+
+            if (line.startsWith("from")) {
+              arrow.from = line.split("=").pop().trim();
+            }
+
+            if (line.startsWith("to")) {
+              arrow.to = line.split("=").pop().trim();
+            }
+
+            i++;
+          }
+
+          step.arrows.push(arrow);
+          i++; // skip ")"
+          continue;
+        }
+
+        i++;
       }
-      continue;
+
+      steps.push(step);
     }
 
-    // ---------- SPECIES ----------
-    if (currentStep && line.startsWith("species:")) {
-      const species = line
-        .replace("species:", "")
-        .split("+")
-        .map(s => s.trim());
+    i++;
+  }
 
-      currentStep.species = species;
-      continue;
+  // =========================
+  // STEP MATERIALIZATION
+  // =========================
+
+  const molecules = new Set();
+  const arrows = [];
+
+  for (const step of steps) {
+    // register molecules
+    for (const role in step.species) {
+      molecules.add(step.species[role]);
     }
 
-    // ---------- ARROW ----------
-    if (currentStep && line.startsWith("arrow(")) {
-      const args = {};
+    // materialize arrows
+    for (const arrow of step.arrows) {
+      const [fromRole, fromAtom] = arrow.from.split(".");
+      const [toRole, toBond] = arrow.to.split(".");
 
-      line
-        .replace("arrow(", "")
-        .replace(")", "")
-        .split(",")
-        .map(p => p.trim())
-        .forEach(p => {
-          if (!p.includes("=")) return; // ignore flags like "curved"
-          const [k, v] = p.split("=").map(s => s.trim());
-          args[k] = v;
-        });
-
-      currentStep.arrows.push({
-        from: args.from,
-        to: args.to
+      arrows.push({
+        type: arrow.type,
+        from: `${step.species[fromRole]}.${fromAtom}`,
+        to: `${step.species[toRole]}.${toBond}`
       });
-
-      continue;
     }
   }
 
-  return ast;
+  return {
+    reaction: {
+      molecules: Array.from(molecules),
+      arrows
+    }
+  };
 }
