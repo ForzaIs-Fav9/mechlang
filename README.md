@@ -98,3 +98,34 @@ A step represents a single elementary reaction event where all arrows
 occur simultaneously.
 
 Arrows outside steps are invalid.
+## Step-Based Mechanism Semantics (v0.8+)
+MechLang uses **explicit step blocks** to represent reaction mechanisms.
+Each `step {}` defines a **self-contained semantic context**:
+- Species declared in a step exist only in that step
+- Arrows may reference only species within the same step
+- Arrow resolution is deterministic and local
+### Syntax
+```mech
+step {
+  species:
+    nucleophile = CN-
+    electrophile = CH3-Br
+  arrow(
+    curved,
+    from = nucleophile.C,
+    to   = electrophile.C-Br
+  )
+}
+```
+Semantic Rules
+species: defines named roles
+Arrow targets use role.selector
+Selectors may be:
+Atom symbols (C, N, Br)
+Bonds (C-Br)
+Arrows cannot cross steps
+This design ensures:
+Clear reaction timelines
+Deterministic rendering
+No global state ambiguity
+Multi-step mechanisms are represented by multiple step {} blocks rendered vertically.
