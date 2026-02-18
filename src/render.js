@@ -1,12 +1,16 @@
 import fs from "fs";
 import { parseMechlang } from "./parse.js";
 
-console.log("USING ATOM-LEVEL, STEP-AWARE RENDERER v0.7");
+console.log("USING ATOM-LEVEL, STEP-AWARE RENDERER v0.8");
+
+/* ===============================
+   Atom templates (visual only)
+   =============================== */
 
 const atomTemplates = {
   "CN-": {
-    atoms: { C: { x: 0, y: 0 }, N: { x: -25, y: 0 } },
-    bonds: [["C", "N"]]
+    atoms: { N: { x: 0, y: 0 }, C: { x: 25, y: 0 } },
+    bonds: [["N", "C"]]
   },
   "CH3-Br": {
     atoms: { C: { x: 0, y: 0 }, Br: { x: 40, y: 0 } },
@@ -14,105 +18,149 @@ const atomTemplates = {
   }
 };
 
+/* ===============================
+   IO
+   =============================== */
+
 const inputFile = process.argv[2];
 const input = fs.readFileSync(inputFile, "utf-8");
 const outputFile = "out/" + inputFile.split("/").pop().replace(".mech", ".svg");
 
+/* ===============================
+   Parse
+   =============================== */
+
 const ast = parseMechlang(input);
 
-function buildMolecule(name, x, y) {
-  const tpl = atomTemplates[name];
-  if (!tpl) return null;
+/* ===============================
+   Layout
+   =============================== */
 
-  const atoms = {};
-  for (const k in tpl.atoms) {
-    atoms[k] = {
-      x: x + tpl.atoms[k].x,
-      y: y + tpl.atoms[k].y
-    };
+const STEP_Y_GAP = 160;
+const MOLECULE_X_GAP = 140;
+
+/* ===============================
+   Build molecules per step
+   =============================== */
+
+function buildStep(step, stepIndex) {
+  const molecules = [];
+
+  let x = 120;
+  const y = 120 + stepIndex * STEP_Y_GAP;
+
+  for (const [role, name] of Object.entries(step.species)) {
+    const template = atomTemplates[name];
+    if (!template) continue;
+
+    const atoms = {};
+    for (const [sym, pos] of Object.entries(template.atoms)) {
+      atoms[sym] = { x: x + pos.x, y: y + pos.y };
+    }
+
+    const bonds = template.bonds.map(([a, b]) => ({
+      a, b,
+      x1: atoms[a].x,
+      y1: atoms[a].y,
+      x2: atoms[b].x,
+      y2: atoms[b].y,
+      mx: (atoms[a].x + atoms[b].x) / 2,
+      my: (atoms[a].y + atoms[b].y) / 2
+    }));
+
+    molecules.push({ role, name, atoms, bonds });
+    x += MOLECULE_X_GAP;
   }
 
-  const bonds = tpl.bonds.map(([a, b]) => ({
-    a, b,
-    x1: atoms[a].x,
-    y1: atoms[a].y,
-    x2: atoms[b].x,
-    y2: atoms[b].y,
-    mx: (atoms[a].x + atoms[b].x) / 2,
-    my: (atoms[a].y + atoms[b].y) / 2
-  }));
-
-  return { name, atoms, bonds };
+  return molecules;
 }
 
-const step = ast.steps[0];
+/* ===============================
+   Arrow resolution (STRICT)
+   =============================== */
 
-const molecules = [];
-molecules.push(buildMolecule(step.species.nucleophile, 120, 150));
-molecules.push(buildMolecule(step.species.electrophile, 320, 150));
+function resolveArrowTarget(expr, molecules) {
+  if (!expr) return null;
 
-function resolveTarget(target) {
-  if (!target) return null;
+  const [role, selector] = expr.split(".");
+  const mol = molecules.find(m => m.role === role);
+  if (!mol) return null;
 
-  if (target.includes(".")) {
-    const [, selector] = target.split(".");
-    return resolveTarget(selector);
+  if (selector.includes("-")) {
+    const [a, b] = selector.split("-");
+    const bond = mol.bonds.find(
+      bd => (bd.a === a && bd.b === b) || (bd.a === b && bd.b === a)
+    );
+    if (bond) return { x: bond.mx, y: bond.my };
   }
 
-  if (target.includes("-")) {
-    const [a, b] = target.split("-");
-    for (const m of molecules) {
-      const bond = m?.bonds.find(
-        bd => (bd.a === a && bd.b === b) || (bd.a === b && bd.b === a)
-      );
-      if (bond) return { x: bond.mx, y: bond.my };
-    }
-  }
-
-  for (const m of molecules) {
-    if (m?.atoms[target]) return m.atoms[target];
+  if (mol.atoms[selector]) {
+    return mol.atoms[selector];
   }
 
   return null;
 }
 
-function renderArrows() {
-  return step.arrows.map(a => {
-    const start = resolveTarget(a.from);
-    const end = resolveTarget(a.to);
-    if (!start || !end) return "";
+/* ===============================
+   SVG helpers
+   =============================== */
 
-    return `<path d="M ${start.x} ${start.y}
-      Q ${(start.x + end.x) / 2} ${start.y - 80}
-      ${end.x} ${end.y}"
-      stroke="black" fill="none" marker-end="url(#arrow)"/>`;
-  }).join("\n");
+function arrowPath(start, end) {
+  const cx = (start.x + end.x) / 2;
+  const cy = Math.min(start.y, end.y) - 60;
+  return `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`;
 }
 
+/* ===============================
+   Render
+   =============================== */
+
+let svgContent = "";
+
+ast.steps.forEach((step, i) => {
+  const molecules = buildStep(step, i);
+
+  molecules.forEach(m =>
+    m.bonds.forEach(b =>
+      svgContent += `<line x1="${b.x1}" y1="${b.y1}" x2="${b.x2}" y2="${b.y2}" stroke="black"/>`
+    )
+  );
+
+  molecules.forEach(m =>
+    Object.entries(m.atoms).forEach(([sym, pos]) =>
+      svgContent += `<text x="${pos.x}" y="${pos.y + 5}" text-anchor="middle" font-size="14">${sym}</text>`
+    )
+  );
+
+  step.arrows.forEach(a => {
+    const start = resolveArrowTarget(a.from, molecules);
+    const end = resolveArrowTarget(a.to, molecules);
+    if (!start || !end) return;
+
+    svgContent += `
+      <path d="${arrowPath(start, end)}"
+            stroke="black"
+            fill="none"
+            marker-end="url(#arrowhead)" />
+    `;
+  });
+});
+
+/* ===============================
+   SVG wrapper
+   =============================== */
+
 const svg = `
-<svg width="600" height="300" xmlns="http://www.w3.org/2000/svg">
+<svg width="900" height="600" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <marker id="arrow" markerWidth="6" markerHeight="6"
-      refX="5" refY="3" orient="auto">
-      <polygon points="0 0,6 3,0 6" fill="black"/>
+    <marker id="arrowhead" markerWidth="6" markerHeight="6"
+            refX="5" refY="3" orient="auto">
+      <polygon points="0 0, 6 3, 0 6" fill="black"/>
     </marker>
   </defs>
-
-  ${molecules.flatMap(m =>
-    m.bonds.map(b =>
-      `<line x1="${b.x1}" y1="${b.y1}" x2="${b.x2}" y2="${b.y2}" stroke="black"/>`
-    )
-  ).join("\n")}
-
-  ${molecules.flatMap(m =>
-    Object.entries(m.atoms).map(([k, v]) =>
-      `<text x="${v.x}" y="${v.y + 5}" text-anchor="middle">${k}</text>`
-    )
-  ).join("\n")}
-
-  ${renderArrows()}
+  ${svgContent}
 </svg>
 `;
 
 fs.writeFileSync(outputFile, svg);
-console.log(`Rendered ${outputFile}`);
+console.log("Rendered", outputFile);
