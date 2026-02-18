@@ -130,10 +130,19 @@ ast.steps.forEach((step, i) => {
   );
 
   // arrows
-  step.arrows.forEach(a => {
-    const start = resolveArrowTarget(a.from, molecules);
-    const end = resolveArrowTarget(a.to, molecules);
-    if (!start || !end) return;
+step.arrows.forEach(a => {
+  const start = resolveArrowTarget(a.from, molecules);
+  const end = resolveArrowTarget(a.to, molecules);
+
+  console.log("DEBUG arrow:");
+  console.log(" from:", a.from, "->", start);
+  console.log(" to:", a.to, "->", end);
+
+  if (!start || !end) {
+    console.log(" Arrow skipped due to unresolved target");
+    return;
+  }
+
 
     svgContent += `
       <path d="${arrowPath(start, end)}"
