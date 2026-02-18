@@ -3,6 +3,11 @@ step {
     electrophile = CH3-Br
     nucleophile = OH-
 
-  arrow(curved, from=OH:, to=C)
-  arrow(curved, from=C-Br, to=Br)
+  arrow(curved,
+        from = nucleophile.O,
+        to   = electrophile.C)
+
+  arrow(curved,
+        from = electrophile.C-Br,
+        to   = electrophile.Br)
 }
