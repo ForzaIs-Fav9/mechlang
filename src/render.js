@@ -31,10 +31,6 @@ const outputFile = path.join("out", baseName.replace(".mech", ".svg"));
 
 const ast = parseMechlang(input);
 
-console.log("DEBUG AST:");
-console.log(JSON.stringify(ast, null, 2));
-
-
 const STEP_Y_GAP = 160;
 const MOLECULE_X_GAP = 140;
 
@@ -85,7 +81,6 @@ function resolveArrowTarget(expr, molecules) {
   const mol = molecules.find(m => m.role === role);
   if (!mol) return null;
 
-  // bond target
   if (selector.includes("-")) {
     const [a, b] = selector.split("-");
     const bond = mol.bonds.find(
@@ -95,7 +90,6 @@ function resolveArrowTarget(expr, molecules) {
     if (bond) return { x: bond.mx, y: bond.my };
   }
 
-  // atom target
   if (mol.atoms[selector]) {
     return mol.atoms[selector];
   }
@@ -115,34 +109,22 @@ let svgContent = "";
 ast.steps.forEach((step, i) => {
   const molecules = buildStep(step, i);
 
-  // bonds
   molecules.forEach(m =>
     m.bonds.forEach(b =>
       svgContent += `<line x1="${b.x1}" y1="${b.y1}" x2="${b.x2}" y2="${b.y2}" stroke="black"/>`
     )
   );
 
-  // atoms
   molecules.forEach(m =>
     Object.entries(m.atoms).forEach(([sym, pos]) =>
       svgContent += `<text x="${pos.x}" y="${pos.y + 5}" text-anchor="middle" font-size="14">${sym}</text>`
     )
   );
 
-  // arrows
-step.arrows.forEach(a => {
-  const start = resolveArrowTarget(a.from, molecules);
-  const end = resolveArrowTarget(a.to, molecules);
-
-  console.log("DEBUG arrow:");
-  console.log(" from:", a.from, "->", start);
-  console.log(" to:", a.to, "->", end);
-
-  if (!start || !end) {
-    console.log(" Arrow skipped due to unresolved target");
-    return;
-  }
-
+  step.arrows.forEach(a => {
+    const start = resolveArrowTarget(a.from, molecules);
+    const end = resolveArrowTarget(a.to, molecules);
+    if (!start || !end) return;
 
     svgContent += `
       <path d="${arrowPath(start, end)}"
