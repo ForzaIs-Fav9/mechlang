@@ -6,13 +6,69 @@ console.log("USING ATOM-LEVEL, STEP-AWARE RENDERER v0.8");
 
 // ---- Atom templates ----
 const atomTemplates = {
+  // Cyanide
   "CN-": {
-    atoms: { N: { x: 0, y: 0 }, C: { x: 25, y: 0 } },
+    atoms: {
+      N: { x: 0, y: 0 },
+      C: { x: 25, y: 0 }
+    },
     bonds: [["N", "C"]]
   },
+
+  // Methyl bromide
   "CH3-Br": {
-    atoms: { C: { x: 0, y: 0 }, Br: { x: 40, y: 0 } },
+    atoms: {
+      C: { x: 0, y: 0 },
+      Br: { x: 40, y: 0 }
+    },
     bonds: [["C", "Br"]]
+  },
+
+  // Methyl chloride
+  "CH3-Cl": {
+    atoms: {
+      C: { x: 0, y: 0 },
+      Cl: { x: 40, y: 0 }
+    },
+    bonds: [["C", "Cl"]]
+  },
+
+  // Methyl cyanide
+  "CH3-CN": {
+    atoms: {
+      C: { x: 0, y: 0 },
+      C2: { x: 40, y: 0 },
+      N: { x: 65, y: 0 }
+    },
+    bonds: [
+      ["C", "C2"],
+      ["C2", "N"]
+    ]
+  },
+
+  // Methanol
+  "CH3-OH": {
+    atoms: {
+      C: { x: 0, y: 0 },
+      O: { x: 40, y: 0 }
+    },
+    bonds: [["C", "O"]]
+  },
+
+  // Bromide ion
+  "Br-": {
+    atoms: {
+      Br: { x: 0, y: 0 }
+    },
+    bonds: []
+  },
+
+  // Chloride ion
+  "Cl-": {
+    atoms: {
+      Cl: { x: 0, y: 0 }
+    },
+    bonds: []
   }
 };
 
