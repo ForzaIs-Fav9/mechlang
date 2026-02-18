@@ -1,7 +1,8 @@
-reaction {
-  reactants: CH3-Cl + CN-
-  products: CH3-CN + Cl-
-}
+step {
+  species:
+    electrophile = CH3-Cl
+    nucleophile = CN-
 
-arrow(curved, from=CN:, to=C)
-arrow(curved, from=C-Cl, to=Cl)
+  arrow(curved, from=CN:, to=C)
+  arrow(curved, from=C-Cl, to=Cl)
+}
