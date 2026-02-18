@@ -31,6 +31,10 @@ const outputFile = path.join("out", baseName.replace(".mech", ".svg"));
 
 const ast = parseMechlang(input);
 
+console.log("DEBUG AST:");
+console.log(JSON.stringify(ast, null, 2));
+
+
 const STEP_Y_GAP = 160;
 const MOLECULE_X_GAP = 140;
 
