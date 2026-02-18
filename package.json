@@ -1,3 +1,8 @@
 {
-  "type": "module"
+  "name": "mechlang",
+  "version": "0.8.0",
+  "type": "module",
+  "scripts": {
+    "render": "node src/render.js"
+  }
 }
