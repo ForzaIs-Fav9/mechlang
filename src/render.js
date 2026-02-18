@@ -1,9 +1,9 @@
 import fs from "fs";
+import path from "path";
 import { parseMechlang } from "./parse.js";
 
 console.log("USING ATOM-LEVEL, STEP-AWARE RENDERER v0.8");
 
-// ---- Atom templates ----
 const atomTemplates = {
   "CN-": {
     atoms: { N: { x: 0, y: 0 }, C: { x: 25, y: 0 } },
@@ -15,9 +15,7 @@ const atomTemplates = {
   }
 };
 
-// ---- CLI arguments ----
-// Usage:
-// node src/render.js examples/sn2_steps.mech horizontal
+// CLI
 const inputFile = process.argv[2];
 const layoutMode = process.argv[3] || "vertical";
 
@@ -28,9 +26,9 @@ if (!inputFile) {
 
 const input = fs.readFileSync(inputFile, "utf-8");
 
-const outputFile =
-  "out/" +
-  inputFile.split("/").pop().replace(".mech", ".svg");
+/* ---- FIXED OUTPUT PATH ---- */
+const baseName = path.basename(inputFile);
+const outputFile = path.join("out", baseName.replace(".mech", ".svg"));
 
 const ast = parseMechlang(input);
 
@@ -38,15 +36,12 @@ const STEP_GAP = 160;
 const STEP_GAP_HORIZONTAL = 240;
 const MOLECULE_X_GAP = 140;
 
-// ---- Step builder ----
 function buildStep(step, stepIndex) {
   const molecules = [];
 
-  // default starting point
   let x = 120;
   let y = 120;
 
-  // choose layout mode
   if (layoutMode === "horizontal") {
     x += stepIndex * STEP_GAP_HORIZONTAL;
   } else {
@@ -58,7 +53,6 @@ function buildStep(step, stepIndex) {
     if (!template) continue;
 
     const atoms = {};
-
     for (const [sym, pos] of Object.entries(template.atoms)) {
       atoms[sym] = {
         x: x + pos.x,
@@ -79,7 +73,6 @@ function buildStep(step, stepIndex) {
 
     molecules.push({ role, name, atoms, bonds });
 
-    // only shift horizontally for vertical layout
     if (layoutMode !== "horizontal") {
       x += MOLECULE_X_GAP;
     }
@@ -88,7 +81,6 @@ function buildStep(step, stepIndex) {
   return molecules;
 }
 
-// ---- Arrow resolution ----
 function resolveArrowTarget(expr, molecules) {
   if (!expr) return null;
 
@@ -118,27 +110,23 @@ function arrowPath(start, end) {
   return `M ${start.x} ${start.y} Q ${cx} ${cy} ${end.x} ${end.y}`;
 }
 
-// ---- SVG assembly ----
 let svgContent = "";
 
 ast.steps.forEach((step, i) => {
   const molecules = buildStep(step, i);
 
-  // bonds
   molecules.forEach(m =>
     m.bonds.forEach(b =>
       svgContent += `<line x1="${b.x1}" y1="${b.y1}" x2="${b.x2}" y2="${b.y2}" stroke="black"/>`
     )
   );
 
-  // atoms
   molecules.forEach(m =>
     Object.entries(m.atoms).forEach(([sym, pos]) =>
       svgContent += `<text x="${pos.x}" y="${pos.y + 5}" text-anchor="middle" font-size="14">${sym}</text>`
     )
   );
 
-  // arrows
   step.arrows.forEach(a => {
     const start = resolveArrowTarget(a.from, molecules);
     const end = resolveArrowTarget(a.to, molecules);
