@@ -51,18 +51,24 @@ export function parseMechlang(input) {
 
       if (line === ")") continue;
 
-      if (line === "curved,") {
+      if (line === "curved," || line === "curved") {
         arrow.curved = true;
         continue;
       }
 
       if (line.startsWith("from")) {
-        arrow.from = line.split("=")[1].trim();
+        arrow.from = line
+          .split("=")[1]
+          .trim()
+          .replace(/,$/, "");
         continue;
       }
 
       if (line.startsWith("to")) {
-        arrow.to = line.split("=")[1].trim();
+        arrow.to = line
+          .split("=")[1]
+          .trim()
+          .replace(/,$/, "");
         continue;
       }
     }
