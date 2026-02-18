@@ -8,72 +8,64 @@ export function parseMechlang(input) {
     steps: []
   };
 
-  let i = 0;
+  let currentStep = null;
+  let mode = null;
 
-  while (i < lines.length) {
-    if (lines[i] === "step {") {
-      i++;
-      const step = {
+  for (const line of lines) {
+    if (line === "step {") {
+      currentStep = {
         species: {},
         arrows: []
       };
-
-      while (lines[i] !== "}") {
-        const line = lines[i];
-
-        // species block
-        if (line === "species:") {
-          i++;
-          while (!lines[i].startsWith("arrow") && !lines[i].startsWith("}")) {
-            const [key, value] = lines[i].split("=").map(s => s.trim());
-            step.species[key] = value;
-            i++;
-          }
-          continue;
-        }
-
-        // arrow(...)
-        if (line.startsWith("arrow(")) {
-          const arrow = {
-            kind: "curved",
-            from: null,
-            to: null
-          };
-
-          i++;
-          while (lines[i] !== ")") {
-            const l = lines[i].replace(",", "");
-
-            if (l === "curved") {
-              arrow.kind = "curved";
-            }
-
-            if (l.startsWith("from")) {
-              arrow.from = l.split("=").pop().trim();
-            }
-
-            if (l.startsWith("to")) {
-              arrow.to = l.split("=").pop().trim();
-            }
-
-            i++;
-          }
-
-          if (arrow.from && arrow.to) {
-            step.arrows.push(arrow);
-          }
-
-          i++; // skip ')'
-          continue;
-        }
-
-        i++;
-      }
-
-      ast.steps.push(step);
+      ast.steps.push(currentStep);
+      continue;
     }
 
-    i++;
+    if (line === "}") {
+      currentStep = null;
+      mode = null;
+      continue;
+    }
+
+    if (!currentStep) continue;
+
+    if (line.startsWith("species:")) {
+      mode = "species";
+      continue;
+    }
+
+    if (line.startsWith("arrow(")) {
+      mode = "arrow";
+      currentStep.arrows.push({});
+      continue;
+    }
+
+    if (mode === "species") {
+      const [key, value] = line.split("=").map(s => s.trim());
+      currentStep.species[key] = value;
+      continue;
+    }
+
+    if (mode === "arrow") {
+      const arrow = currentStep.arrows[currentStep.arrows.length - 1];
+
+      if (line === ")") continue;
+
+      if (line === "curved,") {
+        arrow.curved = true;
+        continue;
+      }
+
+      if (line.startsWith("from")) {
+        arrow.from = line.split("=")[1].trim();
+        continue;
+      }
+
+      if (line.startsWith("to")) {
+        arrow.to = line.split("=")[1].trim();
+        continue;
+      }
+    }
   }
 
   return ast;
