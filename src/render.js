@@ -225,19 +225,3 @@ console.log(`Rendered → ${outputFile}`);
 ```
 
 ---
-
-## 📋 Commits
-
-**Commit 1**
-```
-feat(molecules): add molecule registry with 25 common organic species
-```
-
-**Commit 2**
-```
-fix(parser): add error reporting, safe = split, mode reset on arrow close
-```
-
-**Commit 3**
-```
-feat(renderer): dynamic SVG height, perpendicular arrows, charge rendering
