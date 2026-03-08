@@ -35,8 +35,8 @@ const ast = parseMechlang(input);
 // ── Layout constants ─────────────────────────────────────────────────────────
 
 const STEP_Y_GAP    = 160;
-const MOLECULE_X_GAP = 140;
-const STEP_Y_ORIGIN  = 120;
+const MOLECULE_X_GAP = 180;
+const STEP_Y_ORIGIN  = 140;
 
 // ── Step builder ─────────────────────────────────────────────────────────────
 
@@ -183,7 +183,7 @@ ast.steps.forEach((step, stepIndex) => {
     const firstPos = Object.values(m.atoms)[0];
     if (!firstPos) return;
     svgParts.push(
-      `<text x="${(firstPos.x + 12).toFixed(1)}" y="${(firstPos.y - 6).toFixed(1)}" font-size="11" font-family="serif" fill="#333">${chargeSymbol(m.charge)}</text>`
+      `<text x="${(firstPos.x + 16).toFixed(1)}" y="${(firstPos.y - 12).toFixed(1)}" font-size="11" font-family="serif" fill="#333">${chargeSymbol(m.charge)}</text>`
     );
   });
 
