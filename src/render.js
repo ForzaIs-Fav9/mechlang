@@ -221,7 +221,4 @@ const svg = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3
 </svg>`;
 
 fs.writeFileSync(outputFile, svg);
-console.log(`Rendered → ${outputFile}`);
-```
-
----
+console.log(`Rendered -> ${outputFile}`);
