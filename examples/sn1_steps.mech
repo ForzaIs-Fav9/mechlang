@@ -1,0 +1,23 @@
+step {
+  species:
+    substrate = CH3-Br
+    leaving   = Br-
+
+  arrow(
+    curved,
+    from = substrate.C-Br,
+    to   = leaving.Br
+  )
+}
+
+step {
+  species:
+    carbocation = CH3+
+    nucleophile = OH-
+
+  arrow(
+    curved,
+    from = nucleophile.O,
+    to   = carbocation.C
+  )
+}
