@@ -154,8 +154,8 @@ function arrowPath(start, end, arrowIndex = 0) {
   const dy  = end.y - start.y;
   const len = Math.sqrt(dx * dx + dy * dy) || 1;
 
-  const nx = -dy / len;
-  const ny =  dx / len;
+  const nx = dy / len;
+  const ny = -dx / len;
 
   const offset = 50 + arrowIndex * 20;
   const cx = (start.x + end.x) / 2 + nx * offset;
