@@ -25,7 +25,6 @@ if (layoutMode !== "vertical" && layoutMode !== "horizontal") {
 const input = fs.readFileSync(inputFile, "utf-8");
 const baseName = path.basename(inputFile);
 
-// Horizontal output gets its own filename so vertical is never overwritten
 const outName = layoutMode === "horizontal"
   ? baseName.replace(".mech", ".horizontal.svg")
   : baseName.replace(".mech", ".svg");
@@ -35,19 +34,18 @@ const ast = parseMechlang(input);
 
 // ── Layout constants ─────────────────────────────────────────────────────────
 
-const STEP_Y_GAP      = 160;  // vertical: gap between steps
-const STEP_X_GAP      = 260;  // horizontal: gap between steps
-const MOLECULE_X_GAP  = 180;  // gap between molecules within a step
-const STEP_Y_ORIGIN   = 140;  // vertical: top margin
-const STEP_X_ORIGIN   = 120;  // horizontal: left margin
-const MOLECULE_Y_GAP  = 100;  // horizontal: gap between molecules within a step
+const STEP_Y_GAP     = 160;
+const STEP_X_GAP     = 260;
+const MOLECULE_X_GAP = 180;
+const MOLECULE_Y_GAP = 100;
+const STEP_Y_ORIGIN  = 140;
+const STEP_X_ORIGIN  = 120;
 
 // ── Step builder ─────────────────────────────────────────────────────────────
 
 function buildStep(step, stepIndex) {
   const molecules = [];
 
-  // Origin for this step depends on layout
   const stepX = layoutMode === "horizontal"
     ? STEP_X_ORIGIN + stepIndex * STEP_X_GAP
     : 120;
@@ -92,7 +90,6 @@ function buildStep(step, stepIndex) {
 
     molecules.push({ role, name, atoms, bonds, charge: template.charge ?? 0 });
 
-    // Advance position for next molecule
     if (layoutMode === "horizontal") {
       moleculeOffsetY += MOLECULE_Y_GAP;
     } else {
@@ -148,19 +145,10 @@ function resolveArrowTarget(expr, molecules) {
 }
 
 // ── Arrow path ───────────────────────────────────────────────────────────────
+
 function arrowPath(start, end, arrowIndex = 0) {
   const cx = (start.x + end.x) / 2;
   const cy = Math.min(start.y, end.y) - (60 + arrowIndex * 20);
-  return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
-}
-
-  const nx = dy / len;
-  const ny = -dx / len;
-
-  const offset = 50 + arrowIndex * 20;
-  const cx = (start.x + end.x) / 2 + nx * offset;
-  const cy = (start.y + end.y) / 2 + ny * offset;
-
   return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
 }
 
@@ -173,9 +161,6 @@ function chargeSymbol(charge) {
 }
 
 // ── Step separator arrows (horizontal mode only) ──────────────────────────────
-//
-// Draws a simple → between steps to show progression.
-// This is a layout element only — no semantic meaning.
 
 function stepSeparator(stepIndex, svgParts) {
   if (layoutMode !== "horizontal") return;
