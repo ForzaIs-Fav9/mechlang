@@ -34,7 +34,7 @@ const ast = parseMechlang(input);
 
 // ── Layout constants ─────────────────────────────────────────────────────────
 
-const STEP_Y_GAP     = 160;
+const STEP_Y_GAP     = 240;
 const STEP_X_GAP     = 260;
 const MOLECULE_X_GAP = 180;
 const MOLECULE_Y_GAP = 100;
@@ -147,11 +147,22 @@ function resolveArrowTarget(expr, molecules) {
 // ── Arrow path ───────────────────────────────────────────────────────────────
 
 function arrowPath(start, end, arrowIndex = 0) {
-  const cx = (start.x + end.x) / 2;
-  const cy = Math.min(start.y, end.y) - (60 + arrowIndex * 20);
-  return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
-}
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+  const offset = 60 + arrowIndex * 20;
 
+  if (dx >= dy) {
+    // Primarily horizontal — bow upward (chemistry convention)
+    const cx = (start.x + end.x) / 2;
+    const cy = Math.min(start.y, end.y) - offset;
+    return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
+  } else {
+    // Primarily vertical — bow to the right
+    const cx = Math.max(start.x, end.x) + offset;
+    const cy = (start.y + end.y) / 2;
+    return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
+  }
+}
 // ── Charge symbol ────────────────────────────────────────────────────────────
 
 function chargeSymbol(charge) {
