@@ -148,11 +148,11 @@ function resolveArrowTarget(expr, molecules) {
 }
 
 // ── Arrow path ───────────────────────────────────────────────────────────────
-
 function arrowPath(start, end, arrowIndex = 0) {
-  const dx  = end.x - start.x;
-  const dy  = end.y - start.y;
-  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const cx = (start.x + end.x) / 2;
+  const cy = Math.min(start.y, end.y) - (60 + arrowIndex * 20);
+  return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
+}
 
   const nx = dy / len;
   const ny = -dx / len;
