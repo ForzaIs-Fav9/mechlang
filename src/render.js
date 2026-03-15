@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { parse } from './parse.js';
-import MOLECULES from './molecules.js';
+import { MOLECULES } from './molecules.js';
 
 // ─── Layout Constants ─────────────────────────────────────────────────────────
 const STEP_Y_GAP      = 240;
