@@ -27,33 +27,26 @@ const source = readFileSync(mechFile, 'utf8');
 const ast    = parseMechlang(source);
 
 // ─── Alias Resolution ─────────────────────────────────────────────────────────
-// step.species = { nucleophile: "CN-", electrophile: "CH3-Br" }
-// resolveMol("nucleophile", step) → moleculeRegistry["CN-"]
 function resolveMol(alias, step) {
   const molKey = step.species[alias];
   return molKey ? moleculeRegistry[molKey] : null;
 }
 
 // ─── Dot Notation Parser ──────────────────────────────────────────────────────
-// "nucleophile.C" → { alias: "nucleophile", atomLabel: "C" }
-// "electrophile.C-Br" → { alias: "electrophile", atomLabel: "C" }
-// Falls back to first atom if no dot notation present
 function parseArrowRef(ref, step) {
   const dotIndex = ref.indexOf('.');
   if (dotIndex === -1) {
     return { alias: ref, atomLabel: null };
   }
   const alias     = ref.slice(0, dotIndex);
-  const atomLabel = ref.slice(dotIndex + 1).split('-')[0]; // "C-Br" → "C"
+  const atomLabel = ref.slice(dotIndex + 1).split('-')[0];
   return { alias, atomLabel };
 }
 
 // ─── Atom Position Lookup ─────────────────────────────────────────────────────
-// atoms in molecules.js are objects: { N: {x,y}, C: {x,y} }
 function getAtomPos(mol, atomLabel) {
   if (!mol) return { x: 0, y: 0 };
   if (atomLabel && mol.atoms[atomLabel]) return mol.atoms[atomLabel];
-  // fallback: first atom in the object
   const first = Object.values(mol.atoms)[0];
   return first ?? { x: 0, y: 0 };
 }
@@ -106,7 +99,6 @@ function renderMolecule(alias, step, ox, oy) {
 
   let svg = '';
 
-  // Bonds — mol.bonds = [["C", "Br"], ...]
   for (const [a, b] of (mol.bonds || [])) {
     const a1 = mol.atoms[a];
     const a2 = mol.atoms[b];
@@ -118,7 +110,6 @@ function renderMolecule(alias, step, ox, oy) {
     const y2 = oy + a2.y;
 
     if (b === '=' || (a2.order === 2)) {
-      // double bond offset
       const dx  = x2 - x1;
       const dy  = y2 - y1;
       const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -131,12 +122,10 @@ function renderMolecule(alias, step, ox, oy) {
     }
   }
 
-  // Atom labels — mol.atoms = { N: {x,y}, C: {x,y} }
   for (const [label, pos] of Object.entries(mol.atoms)) {
     svg += `<text x="${ox + pos.x}" y="${oy + pos.y}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
   }
 
-  // Charge label (offset from first atom)
   if (mol.charge && mol.charge !== 0) {
     const firstPos    = Object.values(mol.atoms)[0];
     const chargeLabel = mol.charge === 1  ? '+'
@@ -150,8 +139,6 @@ function renderMolecule(alias, step, ox, oy) {
 }
 
 // ─── Arrow Path ───────────────────────────────────────────────────────────────
-// x1/y1 = from (AST source), x2/y2 = to (AST target) — NEVER swapped.
-console.log(`Arrow ${ai}: from=${fromRef.alias}(${x1},${y1}) → to=${toRef.alias}(${x2},${y2})`);
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const dx     = Math.abs(x2 - x1);
   const dy     = Math.abs(y2 - y1);
@@ -190,13 +177,11 @@ function render(ast, horizontal) {
     const step    = ast.steps[si];
     const stepPos = positions[si];
 
-    // Render molecules
     for (const alias of Object.keys(step.species)) {
       const pos = stepPos[alias];
       body += renderMolecule(alias, step, pos.x, pos.y);
     }
 
-    // Render mechanism arrows
     for (let ai = 0; ai < step.arrows.length; ai++) {
       const arrow = step.arrows[ai];
 
@@ -213,17 +198,18 @@ function render(ast, horizontal) {
 
       if (!fromStepPos || !toStepPos) continue;
 
-      // ✅ from = x1/y1, to = x2/y2 — direction from AST, never swapped
       const x1 = fromStepPos.x + fromAtomPos.x;
       const y1 = fromStepPos.y + fromAtomPos.y;
       const x2 = toStepPos.x  + toAtomPos.x;
       const y2 = toStepPos.y  + toAtomPos.y;
 
+      // 🔍 DEBUG — remove after confirming direction
+      console.log(`Step ${si} Arrow ${ai}: from=${fromRef.alias}(${x1},${y1}) → to=${toRef.alias}(${x2},${y2})`);
+
       const d = arrowPath(x1, y1, x2, y2, ai);
       body += `<path d="${d}" fill="none" stroke="black" stroke-width="1.5" marker-end="url(#arrowhead)"/>`;
     }
 
-    // Step transition arrow
     if (si < ast.steps.length - 1) {
       if (horizontal) {
         const x = STEP_X_ORIGIN + si * STEP_X_GAP + STEP_X_GAP / 2;
