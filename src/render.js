@@ -1,224 +1,234 @@
-/**
- * render.js — MechLang Renderer v0.9
- *
- * Consumes the AST produced by parse.js and generates a deterministic SVG.
- *
- * Renderer contract:
- *   - Never crashes on valid mechlang syntax.
- *   - Produces SVG for every parsed input.
- *   - Semantic correctness over visual perfection.
- *   - Deterministic: identical input → identical output.
- *   - No chemistry inference beyond what the AST explicitly encodes.
- */
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import path from 'path';
+import { parseMechlang } from './parse.js';
+import { moleculeRegistry } from './molecules.js';
 
-import fs from "fs";
-import path from "path";
-import { parseMechlang } from "./parse.js";
-import { moleculeRegistry } from "./molecules.js";
+// ─── Layout Constants ─────────────────────────────────────────────────────────
+const STEP_Y_GAP     = 240;
+const STEP_X_GAP     = 260;
+const MOLECULE_X_GAP = 180;
+const MOLECULE_Y_GAP = 100;
+const STEP_Y_ORIGIN  = 140;
+const STEP_X_ORIGIN  = 120;
+const PADDING        = 80;
 
-console.log("MechLang renderer v0.9 — molecule registry + charge rendering");
+// ─── CLI Args ─────────────────────────────────────────────────────────────────
+const args             = process.argv.slice(2);
+const mechFile         = args.find(a => !a.startsWith('--'));
+const layoutHorizontal = args.includes('--layout=horizontal');
 
-// ── CLI ──────────────────────────────────────────────────────────────────────
-
-const inputFile = process.argv[2];
-if (!inputFile) {
-  console.error("Usage: node src/render.js <file.mech>");
+if (!mechFile) {
+  console.error('Usage: node src/render.js <file.mech> [--layout=horizontal]');
   process.exit(1);
 }
 
-const input = fs.readFileSync(inputFile, "utf-8");
-const baseName = path.basename(inputFile);
-const outputFile = path.join("out", baseName.replace(".mech", ".svg"));
+// ─── Parse ────────────────────────────────────────────────────────────────────
+const source = readFileSync(mechFile, 'utf8');
+const ast    = parseMechlang(source);
 
-const ast = parseMechlang(input);
-
-// ── Layout constants ─────────────────────────────────────────────────────────
-
-const STEP_Y_GAP    = 160;
-const MOLECULE_X_GAP = 180;
-const STEP_Y_ORIGIN  = 140;
-
-// ── Step builder ─────────────────────────────────────────────────────────────
-
-function buildStep(step, stepIndex) {
-  const molecules = [];
-  let x = 120;
-  const y = STEP_Y_ORIGIN + stepIndex * STEP_Y_GAP;
-
-  for (const [role, name] of Object.entries(step.species)) {
-    const template = moleculeRegistry[name];
-
-    if (!template) {
-      console.warn(
-        `[mechlang] Unknown molecule "${name}" (role: "${role}") — not in registry. Skipping.`
-      );
-      x += MOLECULE_X_GAP;
-      continue;
-    }
-
-    const atoms = {};
-    for (const [sym, pos] of Object.entries(template.atoms)) {
-      atoms[sym] = { x: x + pos.x, y: y + pos.y };
-    }
-
-    const bonds = template.bonds.map(([a, b]) => ({
-      a, b,
-      x1: atoms[a].x, y1: atoms[a].y,
-      x2: atoms[b].x, y2: atoms[b].y,
-      mx: (atoms[a].x + atoms[b].x) / 2,
-      my: (atoms[a].y + atoms[b].y) / 2
-    }));
-
-    molecules.push({ role, name, atoms, bonds, charge: template.charge ?? 0 });
-    x += MOLECULE_X_GAP;
-  }
-
-  return molecules;
+// ─── Alias Resolution ─────────────────────────────────────────────────────────
+function resolveMol(alias, step) {
+  const molKey = step.species[alias];
+  return molKey ? moleculeRegistry[molKey] : null;
 }
 
-// ── Arrow resolution ─────────────────────────────────────────────────────────
-
-function resolveArrowTarget(expr, molecules) {
-  if (!expr) return null;
-
-  const dotIndex = expr.indexOf(".");
+// ─── Dot Notation Parser ──────────────────────────────────────────────────────
+function parseArrowRef(ref, step) {
+  const dotIndex = ref.indexOf('.');
   if (dotIndex === -1) {
-    console.warn(`[mechlang] Arrow target "${expr}" missing role.selector format. Skipping.`);
-    return null;
+    return { alias: ref, atomLabel: null };
   }
+  const alias     = ref.slice(0, dotIndex);
+  const atomLabel = ref.slice(dotIndex + 1).split('-')[0];
+  return { alias, atomLabel };
+}
 
-  const role     = expr.slice(0, dotIndex);
-  const selector = expr.slice(dotIndex + 1);
-  const mol      = molecules.find(m => m.role === role);
+// ─── Atom Position Lookup ─────────────────────────────────────────────────────
+function getAtomPos(mol, atomLabel) {
+  if (!mol) return { x: 0, y: 0 };
+  if (atomLabel && mol.atoms[atomLabel]) return mol.atoms[atomLabel];
+  const first = Object.values(mol.atoms)[0];
+  return first ?? { x: 0, y: 0 };
+}
+
+// ─── Position Computation ─────────────────────────────────────────────────────
+function computePositions(ast, horizontal) {
+  return ast.steps.map((step, si) => {
+    const aliases = Object.keys(step.species);
+    const stepPos = {};
+
+    aliases.forEach((alias, mi) => {
+      if (horizontal) {
+        stepPos[alias] = {
+          x: STEP_X_ORIGIN + si * STEP_X_GAP,
+          y: STEP_Y_ORIGIN + mi * MOLECULE_Y_GAP,
+        };
+      } else {
+        stepPos[alias] = {
+          x: STEP_X_ORIGIN + mi * MOLECULE_X_GAP,
+          y: STEP_Y_ORIGIN + si * STEP_Y_GAP,
+        };
+      }
+    });
+
+    return stepPos;
+  });
+}
+
+// ─── Canvas Dimensions ────────────────────────────────────────────────────────
+function computeCanvas(positions) {
+  let maxX = 0;
+  let maxY = 0;
+  for (const stepPos of positions) {
+    for (const { x, y } of Object.values(stepPos)) {
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    }
+  }
+  return { width: maxX + PADDING * 2, height: maxY + PADDING * 2 };
+}
+
+// ─── Molecule Renderer ────────────────────────────────────────────────────────
+function renderMolecule(alias, step, ox, oy) {
+  const molKey = step.species[alias];
+  const mol    = molKey ? moleculeRegistry[molKey] : null;
 
   if (!mol) {
-    console.warn(`[mechlang] No molecule found for role "${role}". Skipping arrow target.`);
-    return null;
+    return `<text x="${ox}" y="${oy}" font-family="sans-serif" font-size="13" fill="red">[${alias}?]</text>`;
   }
 
-  // Bond selector: e.g. C-Br
-  if (selector.includes("-")) {
-    const [a, b] = selector.split("-");
-    const bond = mol.bonds.find(
-      bd => (bd.a === a && bd.b === b) || (bd.a === b && bd.b === a)
-    );
-    if (bond) return { x: bond.mx, y: bond.my };
-    console.warn(
-      `[mechlang] Bond "${selector}" not found in "${mol.name}". Falling back to first atom.`
-    );
-  }
+  let svg = '';
 
-  // Atom selector
-  if (mol.atoms[selector]) return mol.atoms[selector];
+  for (const [a, b] of (mol.bonds || [])) {
+    const a1 = mol.atoms[a];
+    const a2 = mol.atoms[b];
+    if (!a1 || !a2) continue;
 
-  // Last resort: first atom
-  const firstAtom = Object.values(mol.atoms)[0];
-  if (firstAtom) {
-    console.warn(
-      `[mechlang] Selector "${selector}" not found in "${mol.name}". Using first atom as fallback.`
-    );
-    return firstAtom;
-  }
+    const x1 = ox + a1.x;
+    const y1 = oy + a1.y;
+    const x2 = ox + a2.x;
+    const y2 = oy + a2.y;
 
-  return null;
-}
-
-// ── Arrow path ───────────────────────────────────────────────────────────────
-//
-// Control point is offset perpendicular to arrow direction.
-// arrowIndex staggers multiple arrows per step to prevent visual overlap.
-
-function arrowPath(start, end, arrowIndex = 0) {
-  const dx  = end.x - start.x;
-  const dy  = end.y - start.y;
-  const len = Math.sqrt(dx * dx + dy * dy) || 1;
-
-  // Perpendicular unit vector (90° CCW)
-  const nx = -dy / len;
-  const ny =  dx / len;
-
-  const offset = 50 + arrowIndex * 20;
-  const cx = (start.x + end.x) / 2 + nx * offset;
-  const cy = (start.y + end.y) / 2 + ny * offset;
-
-  return `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
-}
-
-// ── Charge symbol ────────────────────────────────────────────────────────────
-
-function chargeSymbol(charge) {
-  if (charge ===  1) return "+";
-  if (charge === -1) return "−";
-  return "";
-}
-
-// ── SVG assembly ─────────────────────────────────────────────────────────────
-
-const svgParts = [];
-
-ast.steps.forEach((step, stepIndex) => {
-  const molecules = buildStep(step, stepIndex);
-
-  // Bonds
-  molecules.forEach(m =>
-    m.bonds.forEach(b =>
-      svgParts.push(
-        `<line x1="${b.x1.toFixed(1)}" y1="${b.y1.toFixed(1)}" x2="${b.x2.toFixed(1)}" y2="${b.y2.toFixed(1)}" stroke="black" stroke-width="1.5"/>`
-      )
-    )
-  );
-
-  // Atom labels
-  molecules.forEach(m =>
-    Object.entries(m.atoms).forEach(([sym, pos]) =>
-      svgParts.push(
-        `<text x="${pos.x.toFixed(1)}" y="${(pos.y + 5).toFixed(1)}" text-anchor="middle" font-size="14" font-family="serif">${sym}</text>`
-      )
-    )
-  );
-
-  // Charge annotations
-  molecules.forEach(m => {
-    if (m.charge === 0) return;
-    const firstPos = Object.values(m.atoms)[0];
-    if (!firstPos) return;
-    svgParts.push(
-      `<text x="${(firstPos.x + 10).toFixed(1)}" y="${(firstPos.y - 12).toFixed(1)}" font-size="11" font-family="serif" fill="#333">${chargeSymbol(m.charge)}</text>`
-    );
-  });
-
-  // Curved arrows
-  step.arrows.forEach((a, arrowIndex) => {
-    const start = resolveArrowTarget(a.from, molecules);
-    const end   = resolveArrowTarget(a.to,   molecules);
-    if (!start || !end) {
-      console.warn(
-        `[mechlang] Arrow ${arrowIndex + 1} in step ${stepIndex + 1} unresolved. Skipping.`
-      );
-      return;
+    if (b === '=' || (a2.order === 2)) {
+      const dx  = x2 - x1;
+      const dy  = y2 - y1;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const nx  = (-dy / len) * 3;
+      const ny  = (dx / len) * 3;
+      svg += `<line x1="${x1+nx}" y1="${y1+ny}" x2="${x2+nx}" y2="${y2+ny}" stroke="black" stroke-width="1.5"/>`;
+      svg += `<line x1="${x1-nx}" y1="${y1-ny}" x2="${x2-nx}" y2="${y2-ny}" stroke="black" stroke-width="1.5"/>`;
+    } else {
+      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="black" stroke-width="1.5"/>`;
     }
-    svgParts.push(
-      `<path d="${arrowPath(start, end, arrowIndex)}" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)"/>`
-    );
-  });
-});
+  }
 
-// ── Dynamic canvas size ──────────────────────────────────────────────────────
+  for (const [label, pos] of Object.entries(mol.atoms)) {
+    svg += `<text x="${ox + pos.x}" y="${oy + pos.y}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
+  }
 
-const svgWidth  = 900;
-const svgHeight = Math.max(300, STEP_Y_ORIGIN + ast.steps.length * STEP_Y_GAP + 100);
+  if (mol.charge && mol.charge !== 0) {
+    const firstPos    = Object.values(mol.atoms)[0];
+    const chargeLabel = mol.charge === 1  ? '+'
+                      : mol.charge === -1 ? '−'
+                      : mol.charge > 0    ? `${mol.charge}+`
+                      :                    `${Math.abs(mol.charge)}−`;
+    svg += `<text x="${ox + firstPos.x + 10}" y="${oy + firstPos.y - 12}" font-family="sans-serif" font-size="11">${chargeLabel}</text>`;
+  }
 
-// ── Final SVG ────────────────────────────────────────────────────────────────
+  return svg;
+}
 
-const svg = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
+// ─── Arrow Path ───────────────────────────────────────────────────────────────
+function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
+  const dx     = Math.abs(x2 - x1);
+  const dy     = Math.abs(y2 - y1);
+  const offset = 60 + arrowIndex * 20;
+
+  let cx, cy;
+  if (dx >= dy) {
+    cx = (x1 + x2) / 2;
+    cy = Math.min(y1, y2) - offset;
+  } else {
+    cx = Math.max(x1, x2) + offset;
+    cy = (y1 + y2) / 2;
+  }
+
+  return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+}
+
+// ─── Step Transition Arrow ────────────────────────────────────────────────────
+function renderStepArrow(x, y) {
+  return `<text x="${x}" y="${y}" font-family="sans-serif" font-size="20" fill="#888" text-anchor="middle">→</text>`;
+}
+
+// ─── Main Render ──────────────────────────────────────────────────────────────
+function render(ast, horizontal) {
+  const positions         = computePositions(ast, horizontal);
+  const { width, height } = computeCanvas(positions);
+
+  let body = `
   <defs>
-    <marker id="arrowhead" markerWidth="6" markerHeight="6"
-            refX="5" refY="3" orient="auto">
-      <polygon points="0 0, 6 3, 0 6" fill="black"/>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="black"/>
     </marker>
-  </defs>
-  ${svgParts.join("\n  ")}
-</svg>`;
+  </defs>`;
 
-fs.writeFileSync(outputFile, svg);
-console.log(`Rendered -> ${outputFile}`);
+  for (let si = 0; si < ast.steps.length; si++) {
+    const step    = ast.steps[si];
+    const stepPos = positions[si];
+
+    for (const alias of Object.keys(step.species)) {
+      const pos = stepPos[alias];
+      body += renderMolecule(alias, step, pos.x, pos.y);
+    }
+
+    for (let ai = 0; ai < step.arrows.length; ai++) {
+      const arrow = step.arrows[ai];
+
+      const fromRef = parseArrowRef(arrow.from ?? '', step);
+      const toRef   = parseArrowRef(arrow.to   ?? '', step);
+
+      const fromMol     = resolveMol(fromRef.alias, step);
+      const toMol       = resolveMol(toRef.alias, step);
+      const fromAtomPos = getAtomPos(fromMol, fromRef.atomLabel);
+      const toAtomPos   = getAtomPos(toMol,   toRef.atomLabel);
+
+      const fromStepPos = stepPos[fromRef.alias];
+      const toStepPos   = stepPos[toRef.alias];
+
+      if (!fromStepPos || !toStepPos) continue;
+
+      const x1 = fromStepPos.x + fromAtomPos.x;
+      const y1 = fromStepPos.y + fromAtomPos.y;
+      const x2 = toStepPos.x  + toAtomPos.x;
+      const y2 = toStepPos.y  + toAtomPos.y;
+
+      const d = arrowPath(x1, y1, x2, y2, ai);
+      body += `<path d="${d}" fill="none" stroke="black" stroke-width="1.5" marker-end="url(#arrowhead)"/>`;
+    }
+
+    if (si < ast.steps.length - 1) {
+      if (horizontal) {
+        const x = STEP_X_ORIGIN + si * STEP_X_GAP + STEP_X_GAP / 2;
+        const y = STEP_Y_ORIGIN - 40;
+        body += renderStepArrow(x, y);
+      } else {
+        const x = width / 2;
+        const y = STEP_Y_ORIGIN + si * STEP_Y_GAP + STEP_Y_GAP / 2;
+        body += renderStepArrow(x, y);
+      }
+    }
+  }
+
+  return `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">${body}</svg>`;
+}
+
+// ─── Output ───────────────────────────────────────────────────────────────────
+const svgContent = render(ast, layoutHorizontal);
+const baseName   = path.basename(mechFile, '.mech');
+const suffix     = layoutHorizontal ? '.horizontal.svg' : '.svg';
+const outPath    = `out/${baseName}${suffix}`;
+
+mkdirSync('out', { recursive: true });
+writeFileSync(outPath, svgContent);
+console.log(`✅  Rendered → ${outPath}`);
