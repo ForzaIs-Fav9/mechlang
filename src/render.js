@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
-import { parse } from './parse.js';
+import { parseMechlang } from './parse.js';
 import { moleculeRegistry } from './molecules.js';
 
 // ─── Layout Constants ─────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ if (!mechFile) {
 
 // ─── Parse ────────────────────────────────────────────────────────────────────
 const source = readFileSync(mechFile, 'utf8');
-const ast    = parse(source);
+const ast    = parseMechlang(source);
 
 // ─── Position Computation ─────────────────────────────────────────────────────
 // Returns: positions[stepIndex] = { speciesName: { x, y } }
