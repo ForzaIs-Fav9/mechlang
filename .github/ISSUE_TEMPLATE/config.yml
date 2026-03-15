@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: MechLang Documentation
+    url: https://github.com/Forzals-Fav9/mechlang/tree/main/docs
+    about: Read the architecture, design decisions, and renderer contract docs first.
+  - name: MechLang Roadmap
+    url: https://github.com/Forzals-Fav9/mechlang/blob/main/docs/roadmap.md
+    about: Check if your feature is already planned before requesting it.
