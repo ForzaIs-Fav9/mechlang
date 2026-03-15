@@ -1,5 +1,5 @@
 name: Bug Report
-about: Something broke — rendering, parsing, or SVG output
+description: Something broke — rendering, parsing, or SVG output
 title: "[BUG] "
 labels: bug
 assignees: Forzals-Fav9
