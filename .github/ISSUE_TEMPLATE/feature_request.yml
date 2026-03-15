@@ -1,5 +1,5 @@
 name: Feature Request
-about: New molecule, mechanism, layout, CLI feature, or improvement
+description: New molecule, mechanism, layout, CLI feature, or improvement
 title: "[FEAT] "
 labels: enhancement
 assignees: Forzals-Fav9
