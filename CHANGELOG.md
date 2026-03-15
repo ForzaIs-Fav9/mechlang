@@ -6,9 +6,42 @@ This project follows a release-based changelog.
 Internal commits may not be individually listed.
 
 ---
+## [0.10.0] — 2026-03-15
+
+### Added
+- `--layout=horizontal` CLI flag for horizontal step layout
+- Dynamic canvas sizing for both layout modes
+
+### Fixed
+- Arrow direction now strictly preserved from AST — vertical arrows no longer reversed
+- Species alias resolution before molecule registry lookup
+- Atom position lookup corrected for object-keyed atom structure
+- Dot notation in arrow refs (`nucleophile.C`) correctly parsed
+
+---
+
+## [0.9.0] — 2026-03-08
+
+### Added
+- `molecules.js`: standalone registry of 25 organic species across 6 categories
+- Charge rendering (superscript −/+) on charged species
+- Dynamic SVG canvas height based on step count
+- Perpendicular arrow curves with per-index stagger
+
+### Fixed
+- Parser silent failures replaced with `console.warn` diagnostics
+- Arrow mode no longer bleeds across back-to-back arrow blocks
+- `=` split no longer breaks on values containing `=`
+- Molecule spacing and charge annotation positioning
+
+### Notes
+- `molecules.js` lives in `src/` alongside `parse.js` and `render.js`
+- `sn2_steps.mech` is the canonical reference example going forward
+
+---
 
 [v0.8] — Step-Aware Rendering & Strict Semantics  
-Released: 2026-01-XX
+Released: 2026-03-07
 
 Added
 - Explicit `step {}`-based mechanism structure.
@@ -68,7 +101,7 @@ Notes
 ---
 
 [v0.5] — Atom-Level Diagrams  
-Released: 2026-01-13
+Released: 2026-01-12
 
 Added
 - Atom-level rendering (C, O, N, Br, H).
@@ -83,7 +116,7 @@ Notes
 ---
 
 [v0.4] — Bond Rendering Groundwork  
-Released: 2026-01-12
+Released: 2026-01-11
 
 Added
 - Template-based bond rendering.
@@ -97,7 +130,7 @@ Notes
 ---
 
 [v0.3] — Honest Curved Arrows  
-Released: 2026-01-11
+Released: 2026-01-04
 
 Added
 - Semantic curved-arrow rendering.
@@ -107,6 +140,7 @@ Added
 ---
 
 [v0.2] — Initial Renderer Prototype  
+Released: 2025-12-28
 
 Added
 - Molecule-level layout.
@@ -116,6 +150,7 @@ Added
 ---
 
 [v0.1] — Initial Prototype  
+Released: 2025-12-21
 
 Added
 - MechLang DSL parser.
