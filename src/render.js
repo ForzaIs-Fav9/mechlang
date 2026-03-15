@@ -151,6 +151,7 @@ function renderMolecule(alias, step, ox, oy) {
 
 // ─── Arrow Path ───────────────────────────────────────────────────────────────
 // x1/y1 = from (AST source), x2/y2 = to (AST target) — NEVER swapped.
+console.log(`Arrow ${ai}: from=${fromRef.alias}(${x1},${y1}) → to=${toRef.alias}(${x2},${y2})`);
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const dx     = Math.abs(x2 - x1);
   const dy     = Math.abs(y2 - y1);
