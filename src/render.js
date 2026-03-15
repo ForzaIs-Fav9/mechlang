@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { parse } from './parse.js';
-import { MOLECULES } from './molecules.js';
+import { moleculeRegistry } from './molecules.js';
 
 // ─── Layout Constants ─────────────────────────────────────────────────────────
 const STEP_Y_GAP      = 240;
@@ -71,7 +71,7 @@ function computeCanvas(positions) {
 
 // ─── Molecule Renderer ────────────────────────────────────────────────────────
 function renderMolecule(name, ox, oy) {
-  const mol = MOLECULES[name];
+  const mol = moleculeRegistry[name];
 
   if (!mol) {
     return `<text x="${ox}" y="${oy}" font-family="sans-serif" font-size="14" fill="red">[${name}?]</text>`;
@@ -183,8 +183,8 @@ function render(ast, horizontal) {
 
       if (!fromPos || !toPos) continue;
 
-      const fromMol  = MOLECULES[arrow.from];
-      const toMol    = MOLECULES[arrow.to];
+      const fromMol  = moleculeRegistry[arrow.from];
+      const toMol    = moleculeRegistry[arrow.to];
       const fromAtom = fromMol?.atoms?.[0] ?? { x: 0, y: 0 };
       const toAtom   = toMol?.atoms?.[0]   ?? { x: 0, y: 0 };
 
