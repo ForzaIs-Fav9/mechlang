@@ -1,0 +1,108 @@
+name: Bug Report
+about: Something broke — rendering, parsing, or SVG output
+title: "[BUG] "
+labels: bug
+assignees: Forzals-Fav9
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug in MechLang! The more detail you provide,
+        the faster it gets fixed. Please fill out every section below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly and concisely.
+      placeholder: "e.g. The SN2 mechanism renders arrows in the wrong direction when using --layout=horizontal"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to Reproduce
+      description: Walk us through exactly how to trigger this bug.
+      value: |
+        1. Run: `node src/render.js examples/<file>.mech`
+        2. 
+        3. 
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: mech-input
+    attributes:
+      label: Minimal .mech File
+      description: Paste the smallest .mech input that triggers the bug.
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Output
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Output
+      description: What actually happened? Paste error message or describe the bad SVG output.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Which part of MechLang is affected?
+      options:
+        - Parser (parse.js)
+        - Renderer (render.js)
+        - Molecule registry (molecules.js)
+        - CLI / output files
+        - Layout (vertical/horizontal)
+        - Arrows
+        - Charges / labels
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: MechLang Version
+      placeholder: "e.g. v0.10"
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js Version
+      placeholder: "Run: node --version"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Screenshots, SVG output snippets, anything else helpful.
