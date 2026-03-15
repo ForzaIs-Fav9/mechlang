@@ -1,0 +1,66 @@
+name: Feature Request
+about: New molecule, mechanism, layout, CLI feature, or improvement
+title: "[FEAT] "
+labels: enhancement
+assignees: Forzals-Fav9
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea for MechLang? Whether it's a new molecule, mechanism, or rendering
+        improvement — we'd love to hear it. Fill out the form below.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What do you want to add?
+      description: Describe the feature clearly and concisely.
+      placeholder: "e.g. Add support for E2 elimination with 3 concurrent curved arrows"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: category
+    attributes:
+      label: Which category does this fall under?
+      description: Check all that apply.
+      options:
+        - label: New molecule in registry (`src/molecules.js`)
+        - label: New mechanism support (e.g. E2, carbonyl addition)
+        - label: New arrow type or bond type (e.g. double bond, resonance)
+        - label: Layout / rendering improvement
+        - label: CLI flag or option
+        - label: Documentation
+        - label: Other
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why does MechLang need this?
+      description: What problem does it solve? Who benefits — students, researchers, educators?
+    validations:
+      required: true
+
+  - type: textarea
+    id: syntax
+    attributes:
+      label: Proposed .mech Syntax (if applicable)
+      description: How would a user write this in a .mech file?
+      render: bash
+
+  - type: dropdown
+    id: willing
+    attributes:
+      label: Are you willing to implement this?
+      options:
+        - "Yes — I'd like to open a PR"
+        - "No — just suggesting"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any references, examples from other tools, or related issues.
