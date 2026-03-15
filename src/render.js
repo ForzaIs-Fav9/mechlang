@@ -203,9 +203,6 @@ function render(ast, horizontal) {
       const x2 = toStepPos.x  + toAtomPos.x;
       const y2 = toStepPos.y  + toAtomPos.y;
 
-      // 🔍 DEBUG — remove after confirming direction
-      console.log(`Step ${si} Arrow ${ai}: from=${fromRef.alias}(${x1},${y1}) → to=${toRef.alias}(${x2},${y2})`);
-
       const d = arrowPath(x1, y1, x2, y2, ai);
       body += `<path d="${d}" fill="none" stroke="black" stroke-width="1.5" marker-end="url(#arrowhead)"/>`;
     }
