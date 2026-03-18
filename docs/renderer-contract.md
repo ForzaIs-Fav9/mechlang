@@ -1,62 +1,133 @@
-# Renderer Contract
+# MechLang Renderer Contract
 
-This document defines the guarantees, constraints, and responsibilities of the mechlang renderer.
+This document defines the formal contract between `parse.js`, `molecules.js`,
+and `render.js`. Any change to these interfaces must be reflected here.
 
-It serves as a stability contract between the language semantics (AST) and the visual output (SVG).
+---
 
-## Core Guarantee
+## AST Contract (parse.js → render.js)
 
-The renderer must translate chemical *intent* expressed in the AST into a visually meaningful diagram.
+`parse.js` exports one function:
 
-Visual accuracy may be approximate.
-Semantic accuracy must never be compromised.
+```js
+export function parseMechlang(source: string): AST
+```
 
-## Hard Guarantees
+### AST Shape
 
-The renderer MUST:
+```js
+{
+  steps: Step[]
+}
 
-- Never crash on valid mechlang syntax
-- Produce an SVG for every parsed input
-- Prefer semantic correctness over visual aesthetics
-- Remain deterministic for identical inputs
+Step {
+  species: { [role: string]: string }   // role → molecule registry key
+  arrows:  Arrow[]
+}
 
-The renderer MUST NOT:
+Arrow {
+  curved: boolean
+  from:   string    // "role" or "role.atomLabel" or "role.A-B"
+  to:     string    // same format
+}
+```
 
-- Require users to specify geometry or coordinates
-- Encode reaction-specific logic (e.g. “SN2 rules”)
-- Perform chemical validation or correctness checks
-- Infer chemistry beyond what is explicitly encoded in the AST
+### Parser Guarantees
+- Never throws — emits `console.warn` and skips malformed input
+- Returns `{ steps: [] }` for empty or invalid input
+- `species` values are raw strings — registry resolution is the renderer's job
+- Arrow `from`/`to` are raw strings — dot notation parsing is the renderer's job
 
-## Fallback Behavior
+---
 
-When information is missing or ambiguous, the renderer must degrade gracefully:
+## Molecule Registry Contract (molecules.js → render.js)
 
-- Missing atom templates → fall back to molecule-level anchors
-- Unresolved arrow targets → warn and skip or approximate
-- Unsupported features → ignore safely without failure
+`molecules.js` exports one object:
 
-Under no circumstances should rendering throw an uncaught error due to user input.
+```js
+export const moleculeRegistry: { [key: string]: Molecule }
+```
 
-## Geometry Policy
+### Molecule Shape
 
-- Geometry is heuristic and approximate
-- Atom positions are template-driven
-- Bonds are visual edges, not chemical objects
-- Curved arrows reflect electron flow direction, not physical trajectories
+```js
+Molecule {
+  atoms:   { [atomKey: string]: { x: number, y: number } }
+  bonds:   [string, string, number?][]   // [atomA, atomB, order=1]
+  charge:  number                        // integer, negative = anion
+  labels?: { [atomKey: string]: string } // display override for aliased atoms
+}
+```
 
-Exact molecular geometry is explicitly out of scope.
+### Registry Guarantees
+- All `x`, `y` values are relative offsets from molecule origin
+- Bond order defaults to 1 when third element is absent
+- `labels` is optional — renderer falls back to atom key if absent
+- Charge 0 produces no charge annotation in the SVG
 
-## Extensibility Rule
+---
 
-All renderer behavior must be derivable from the AST.
+## Renderer Contract (render.js)
 
-Adding new visual features must not require changes to the language syntax unless absolutely necessary.
+`render.js` is a CLI entry point, not an importable module.
 
-## Summary
+### Invocation
 
-The renderer exists to visualize meaning, not to simulate chemistry.
+```bash
+node src/render.js <file.mech> [--layout=horizontal]
+```
 
-If forced to choose:
-- Correct meaning beats perfect geometry
-- Stability beats sophistication
-- Clarity beats completeness
+### Output
+
+- Writes SVG to `out/<filename>.svg`
+- With `--layout=horizontal`: `out/<filename>.horizontal.svg`
+- Creates `out/` directory if absent
+- Logs `✅  Rendered → out/<filename>.svg` on success
+
+---
+
+### Rendering Guarantees
+
+**Arrow direction:**
+- `from` ref → SVG path origin (`M x1 y1`)
+- `to` ref → SVG path terminus (arrowhead via `marker-end`)
+- Direction is never altered by geometry
+
+**Atom label rendering:**
+- White `<rect>` background precedes every `<text>` label
+- Label text uses `mol.labels[key]` if present, else `key`
+- Font: `sans-serif`, size `14px`, `text-anchor="middle"`, `dominant-baseline="middle"`
+
+**Charge rendering:**
+- Offset `+10px` x, `-12px` y from first atom position
+- Font size `11px`
+- Symbols: `+`, `−`, `2+`, `2−`, etc.
+
+**Bond rendering:**
+- Single bond: one `<line>` from atom A to atom B
+- Double bond: two `<line>` elements offset ±3px perpendicular to bond axis
+
+**Canvas sizing:**
+- Width and height computed from max atom position + `PADDING * 2`
+- Dynamic in both layout modes
+
+---
+
+### Dot Notation Resolution
+
+| Input | Resolves to |
+|---|---|
+| `role.atomLabel` | `{ alias: role, atomLabel: atomLabel }` |
+| `role.A-B` | `{ alias: role, atomLabel: "A" }` |
+| `role` (no dot) | `{ alias: role, atomLabel: null }` → first atom fallback |
+
+---
+
+### Fallback Behavior
+
+| Condition | Behavior |
+|---|---|
+| Unknown molecule key | Red `[role?]` label at molecule position |
+| Unknown atom label | Falls back to first atom in molecule |
+| Missing `from` or `to` | Arrow skipped, `console.warn` emitted |
+| Missing step position | Arrow skipped silently |
