@@ -1,0 +1,5 @@
+step {
+  species:
+    alkene = CH2=CH2
+    carbonyl = CH2=O
+}

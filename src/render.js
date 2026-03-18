@@ -99,9 +99,12 @@ function renderMolecule(alias, step, ox, oy) {
 
   let svg = '';
 
-  for (const [a, b] of (mol.bonds || [])) {
-    const a1 = mol.atoms[a];
-    const a2 = mol.atoms[b];
+  // Bonds — [atomA, atomB] for single, [atomA, atomB, 2] for double
+  for (const bond of (mol.bonds || [])) {
+    const [aKey, bKey, order = 1] = bond;
+
+    const a1 = mol.atoms[aKey];
+    const a2 = mol.atoms[bKey];
     if (!a1 || !a2) continue;
 
     const x1 = ox + a1.x;
@@ -109,7 +112,7 @@ function renderMolecule(alias, step, ox, oy) {
     const x2 = ox + a2.x;
     const y2 = oy + a2.y;
 
-    if (b === '=' || (a2.order === 2)) {
+    if (order === 2) {
       const dx  = x2 - x1;
       const dy  = y2 - y1;
       const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -122,10 +125,17 @@ function renderMolecule(alias, step, ox, oy) {
     }
   }
 
-  for (const [label, pos] of Object.entries(mol.atoms)) {
-    svg += `<text x="${ox + pos.x}" y="${oy + pos.y}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
+   // Atom labels — white background punches through bond lines
+  for (const [key, pos] of Object.entries(mol.atoms)) {
+    const label = (mol.labels && mol.labels[key]) ? mol.labels[key] : key;
+    const lx    = ox + pos.x;
+    const ly    = oy + pos.y;
+    const w     = label.length > 1 ? label.length * 9 : 14;
+    svg += `<rect x="${lx - w/2}" y="${ly - 9}" width="${w}" height="18" fill="white"/>`;
+    svg += `<text x="${lx}" y="${ly}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
   }
 
+  // Charge label (offset from first atom)
   if (mol.charge && mol.charge !== 0) {
     const firstPos    = Object.values(mol.atoms)[0];
     const chargeLabel = mol.charge === 1  ? '+'
@@ -189,7 +199,7 @@ function render(ast, horizontal) {
       const toRef   = parseArrowRef(arrow.to   ?? '', step);
 
       const fromMol     = resolveMol(fromRef.alias, step);
-      const toMol       = resolveMol(toRef.alias, step);
+      const toMol       = resolveMol(toRef.alias,   step);
       const fromAtomPos = getAtomPos(fromMol, fromRef.atomLabel);
       const toAtomPos   = getAtomPos(toMol,   toRef.atomLabel);
 

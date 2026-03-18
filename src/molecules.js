@@ -1,19 +1,5 @@
-/**
- * molecules.js — MechLang Molecule Registry
- *
- * Each entry defines atom positions (relative coords), bonds, and charge.
- * Coordinates are heuristic and template-driven, not chemically precise.
- * Consistent with the renderer contract: semantic clarity over geometry.
- *
- * To add a molecule: provide atoms (symbol → {x, y}), bonds ([a, b] pairs),
- * and charge (+1, 0, -1).
- * Renderer offsets all positions into step layout automatically.
- */
-
 export const moleculeRegistry = {
-
   // ── Anions / Nucleophiles ─────────────────────────────────────────────────
-
   "CN-": {
     atoms: { N: { x: 0, y: 0 }, C: { x: 25, y: 0 } },
     bonds: [["N", "C"]],
@@ -49,9 +35,7 @@ export const moleculeRegistry = {
     bonds: [],
     charge: -1
   },
-
   // ── Alkyl Halides (Electrophiles) ─────────────────────────────────────────
-
   "CH3-Br": {
     atoms: { C: { x: 0, y: 0 }, Br: { x: 40, y: 0 } },
     bonds: [["C", "Br"]],
@@ -72,9 +56,7 @@ export const moleculeRegistry = {
     bonds: [["C", "F"]],
     charge: 0
   },
-
   // ── Substitution Products ─────────────────────────────────────────────────
-
   "CH3-OH": {
     atoms: { C: { x: 0, y: 0 }, O: { x: 35, y: 0 } },
     bonds: [["C", "O"]],
@@ -95,9 +77,7 @@ export const moleculeRegistry = {
     bonds: [["C", "N"]],
     charge: 0
   },
-
   // ── Acids ─────────────────────────────────────────────────────────────────
-
   "HBr": {
     atoms: { H: { x: 0, y: 0 }, Br: { x: 30, y: 0 } },
     bonds: [["H", "Br"]],
@@ -113,9 +93,7 @@ export const moleculeRegistry = {
     bonds: [["H", "I"]],
     charge: 0
   },
-
   // ── Small Neutral Molecules ───────────────────────────────────────────────
-
   "H2O": {
     atoms: { O: { x: 0, y: 0 } },
     bonds: [],
@@ -131,9 +109,7 @@ export const moleculeRegistry = {
     bonds: [],
     charge: 0
   },
-
   // ── Cations ───────────────────────────────────────────────────────────────
-
   "CH3+": {
     atoms: { C: { x: 0, y: 0 } },
     bonds: [],
@@ -148,6 +124,41 @@ export const moleculeRegistry = {
     atoms: { N: { x: 0, y: 0 } },
     bonds: [],
     charge: 1
+  },
+  // ── C=C Double Bond Species (v0.11) ───────────────────────────────────────
+  "CH2=CH2": {
+    atoms: { Ca: { x: 0, y: 0 }, Cb: { x: 40, y: 0 } },
+    bonds: [["Ca", "Cb", 2]],
+    labels: { Ca: "C", Cb: "C" },
+    charge: 0
+  },
+  "CH3-CH=CH2": {
+    atoms: { Ca: { x: 0, y: 0 }, Cb: { x: 40, y: 0 }, Cc: { x: 80, y: 0 } },
+    bonds: [["Ca", "Cb"], ["Cb", "Cc", 2]],
+    labels: { Ca: "C", Cb: "C", Cc: "C" },
+    charge: 0
+  },
+  // ── C=O Double Bond Species (v0.11) ───────────────────────────────────────
+  "CH2=O": {
+    atoms: { C: { x: 0, y: 0 }, O: { x: 40, y: 0 } },
+    bonds: [["C", "O", 2]],
+    charge: 0
+  },
+  "CH3CHO": {
+    atoms: { Ca: { x: 0, y: 0 }, Cb: { x: 40, y: 0 }, O: { x: 80, y: 0 } },
+    bonds: [["Ca", "Cb"], ["Cb", "O", 2]],
+    labels: { Ca: "C", Cb: "C", O: "O" },
+    charge: 0
+  },
+  "CH3COCH3": {
+    atoms: { Ca: { x: 0, y: 0 }, Cb: { x: 40, y: 0 }, O: { x: 40, y: -35 }, Cc: { x: 80, y: 0 } },
+    bonds: [["Ca", "Cb"], ["Cb", "O", 2], ["Cb", "Cc"]],
+    labels: { Ca: "C", Cb: "C", O: "O", Cc: "C" },
+    charge: 0
+  },
+  "CH3CO-": {
+    atoms: { C: { x: 0, y: 0 }, O: { x: 40, y: 0 } },
+    bonds: [["C", "O", 2]],
+    charge: -1
   }
-
 };
