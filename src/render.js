@@ -125,10 +125,14 @@ function renderMolecule(alias, step, ox, oy) {
     }
   }
 
-  // Atom labels — uses mol.labels alias if present (for Ca/Cb → "C"), else key name
+   // Atom labels — white background punches through bond lines
   for (const [key, pos] of Object.entries(mol.atoms)) {
     const label = (mol.labels && mol.labels[key]) ? mol.labels[key] : key;
-    svg += `<text x="${ox + pos.x}" y="${oy + pos.y}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
+    const lx    = ox + pos.x;
+    const ly    = oy + pos.y;
+    const w     = label.length > 1 ? label.length * 9 : 14;
+    svg += `<rect x="${lx - w/2}" y="${ly - 9}" width="${w}" height="18" fill="white"/>`;
+    svg += `<text x="${lx}" y="${ly}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
   }
 
   // Charge label (offset from first atom)
