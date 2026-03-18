@@ -1,11 +1,28 @@
 # Changelog
 
-All notable changes to MechLang are documented in this file.
-
-This project follows a release-based changelog.  
-Internal commits may not be individually listed.
+All notable changes to MechLang are documented here.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+
+## [0.11.0] — 2026-03-18
+
+### Added
+- Double bond rendering for `C=C` and `C=O` via optional bond order field `[atomA, atomB, 2]`
+- Perpendicular parallel line offset for double bond pairs
+- `labels` map on molecule entries for display name overrides on aliased atoms (e.g. `Ca`/`Cb` → `"C"`)
+- New molecules: `CH2=CH2`, `CH3-CH=CH2`, `CH2=O`, `CH3CHO`, `CH3COCH3`, `CH3CO-`
+- White `<rect>` background behind every atom label — clears bond lines for readable symbols
+
+### Fixed
+- Atom labels previously obscured by bond lines on multi-atom molecules
+
+### Notes
+- Bond order defaults to `1` when third array element is absent — fully backward compatible
+- Single bond molecules in registry require no changes
+
+---
+
 ## [0.10.0] — 2026-03-15
 
 ### Added
@@ -14,9 +31,9 @@ Internal commits may not be individually listed.
 
 ### Fixed
 - Arrow direction now strictly preserved from AST — vertical arrows no longer reversed
-- Species alias resolution before molecule registry lookup
-- Atom position lookup corrected for object-keyed atom structure
-- Dot notation in arrow refs (`nucleophile.C`) correctly parsed
+- Species alias resolution now correctly maps role names to registry keys before lookup
+- Atom position lookup corrected for object-keyed atom structure in `molecules.js`
+- Dot notation in arrow refs (`nucleophile.C`, `electrophile.C-Br`) correctly parsed
 
 ---
 
@@ -40,119 +57,96 @@ Internal commits may not be individually listed.
 
 ---
 
-[v0.8] — Step-Aware Rendering & Strict Semantics  
-Released: 2026-03-07
+## [0.8.0] — 2026-03-07
 
-Added
-- Explicit `step {}`-based mechanism structure.
-- Step-scoped species definitions.
-- Role-based arrow targeting (`role.atom`, `role.bond`).
-- Deterministic vertical step layout.
-- Strict arrow resolution confined to step scope.
-- Formalized contribution workflow (CONTRIBUTING.md).
+### Added
+- `step {}` block support as primary mechanism structure
+- Role-scoped species definitions (`role = MoleculeName`)
+- Step-local arrow resolution
+- Atom-level arrow targeting via `role.atom` and `role.A-B`
+- Expanded atom templates for common undergraduate species: CN⁻, CH3–Br, CH3–Cl, CH3–CN, CH3–OH, Br⁻, Cl⁻
 
-Changed
-- Arrow resolution is no longer global.
-- Renderer enforces step-local semantic universe.
-- Parser recognizes step blocks as first-class constructs.
+### Fixed
+- Trailing comma bug in arrow parsing
+- Arrow resolution failures due to malformed selectors
+- Example files migrated to role-scoped syntax
+- Removed debug instrumentation from renderer
 
-Fixed
-- Prevented undefined arrow target crashes.
-- Removed implicit anchor guessing.
+### Breaking Changes
+- `reaction {}` syntax is no longer supported
+- All arrows must be defined inside `step {}` blocks
+- Arrow targets must use role-scoped selectors (`role.atom` or `role.bond`)
 
-Notes
-This release establishes MechLang as a multi-step semantic mechanism language.
-Geometry remains heuristic by design.
-
----
-
-[v0.7] — Step Blocks & Scoped Arrows  
-Released: 2026-01-14
-
-Added
-- `step {}` DSL syntax.
-- Role-based species assignment inside steps.
-- Multi-step mechanism rendering.
-- Multiple arrows per step.
-
-Changed
-- Arrow targets must reference `role.selector` format.
-- Removed molecule-level anchor fallback behavior.
-
-Notes
-This release marked the transition from single-step diagrams
-to structured, step-aware mechanism semantics.
+### Known Limitations at Release
+- Vertical layout only (horizontal timeline pending)
+- No species persistence across steps
+- No charge superscript rendering
+- No bond order rendering
+- No collision detection for >3 arrows per step
 
 ---
 
-[v0.6] — Multi-Arrow Layout  
-Released: 2026-01-13
+## [0.7.0] — 2026-01-26
 
-Added
-- Support for rendering multiple curved arrows in a single mechanism.
-- Deterministic vertical stacking of arrows to prevent overlap.
-- Stable arrow geometry independent of molecule count.
-
-Notes
-- No changes to the MechLang language syntax.
-- No chemistry validation was added.
-- Arrow layout is handled entirely at the rendering layer.
+### Added
+- Step-aware, role-scoped arrow resolution
+- Scoped arrow targets (`nucleophile.C`, `electrophile.C–Br`)
+- Chemically meaningful curved-arrow mechanisms across reaction steps
 
 ---
 
-[v0.5] — Atom-Level Diagrams  
-Released: 2026-01-12
+## [0.6.0] — 2026-01-13
 
-Added
-- Atom-level rendering (C, O, N, Br, H).
-- Explicit single-bond drawing between atoms.
-- Curved arrows snap to atom positions or bond midpoints.
-- Molecule labels disabled by default.
+### Added
+- Multiple curved arrows per mechanism with deterministic layout
+- Arrow stacking to avoid visual overlap
+- Stable, collision-free arrow curvature and placement
 
-Notes
-- Geometry remains heuristic by design.
-- This release established the foundation for multi-step mechanisms.
+### Notes
+- No DSL syntax changes
+- Arrow stacking is purely a rendering concern
 
 ---
 
-[v0.4] — Bond Rendering Groundwork  
-Released: 2026-01-11
+## [0.5.0] — 2026-01-13
 
-Added
-- Template-based bond rendering.
-- Internal atom templates for simple molecules.
-- Improved arrow anchoring stability.
+### Added
+- Atom-level rendering: molecules drawn with explicit atoms and single bonds
+- Curved arrows snapping to atom or bond midpoints
+- Correct visualization of SN2-style mechanisms
 
-Notes
-- Molecules were still rendered primarily as text labels.
-- This release prepared the renderer for atom-level diagrams.
+### Changed
+- Molecule labels optional and disabled by default
 
 ---
 
-[v0.3] — Honest Curved Arrows  
-Released: 2026-01-04
+## [0.4.0] — 2026-01-13
 
-Added
-- Semantic curved-arrow rendering.
-- Arrow anchors resolve to chemically meaningful targets.
-- Deterministic arrow curvature with left-to-right bias.
+### Added
+- Atom symbols (C, O, N, Br, etc.) rendered directly on diagram
+- Bonds connecting between atom labels
+- Diagram layering matching chemical conventions
 
----
-
-[v0.2] — Initial Renderer Prototype  
-Released: 2025-12-28
-
-Added
-- Molecule-level layout.
-- SVG output pipeline.
-- Single-arrow support.
+### Changed
+- Molecule text labels no longer shown by default
 
 ---
 
-[v0.1] — Initial Prototype  
-Released: 2025-12-21
+## [0.3.0] — 2026-01-04
 
-Added
-- MechLang DSL parser.
-- Abstract syntax tree (AST).
-- Proof-of-concept rendering.
+### Added
+- Template-based single bond rendering
+- Internal molecule model (atoms + bonds)
+- Support for multiple arrows per mechanism
+- Graceful handling of unresolved arrow anchors
+
+---
+
+## [0.2.0] — 2025-12-28
+
+### Added
+- AST-driven semantic rendering
+- Curved-arrow electron flow based on AST semantics
+- Molecule labels derived from parsed source
+- Multi-file CLI support
+- README and architecture documentation
