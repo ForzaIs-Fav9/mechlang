@@ -1,106 +1,148 @@
-# mechlang Architecture
+# MechLang Architecture
 
-This document describes the internal architecture of mechlang and the design decisions behind its current implementation.
-
-The goal of mechlang is not visual perfection, but semantic clarity: representing organic reaction mechanisms as structured data that can be interpreted programmatically.
-
----
-
-## High-level architecture
-
-mechlang follows a compiler-style architecture with three main stages:
-
-1. Parsing
-2. Intermediate representation (AST)
-3. Rendering
-.me ch → Parser → AST → Renderer → SVG
-
-
-Each stage has a single responsibility and is intentionally decoupled from the others.
+This document describes the structural design of MechLang and the
+responsibilities of each component in the pipeline.
 
 ---
 
-## Parser design
+## Pipeline Overview
+```
+.mech source file
+      ↓
+  parse.js        → AST
+      ↓
+  render.js       → SVG string
+      ↓
+  out/*.svg       → browser / export
+```
 
-The parser reads a `.mech` file as plain text and converts it into a structured abstract syntax tree (AST).
-
-Design principles:
-- simple, line-oriented parsing
-- no attempt to infer chemical correctness
-- prioritize explicitness over convenience
-
-The parser recognizes:
-- a reaction block containing reactants and products
-- arrow statements describing electron movement
-
-The output of the parser is purely semantic data with no visual or geometric information.
+The pipeline is strictly linear. No component reaches backward.
+The parser never touches geometry. The renderer never touches syntax.
 
 ---
 
-## Abstract Syntax Tree (AST)
+## Components
 
-The AST is the core internal representation used by mechlang.
+### `src/parse.js`
 
-At a high level, it consists of:
-- a reaction object (reactants and products)
-- a list of arrow objects (electron flow)
-
-Example structure:
-
-```json
+Reads a `.mech` source string and produces an AST of the form:
+```js
 {
-  "reaction": {
-    "reactants": ["CH3-Br", "OH-"],
-    "products": ["CH3-OH", "Br-"]
-  },
-  "arrows": [
-    { "style": "curved", "from": "OH:", "to": "C" },
-    { "style": "curved", "from": "C-Br", "to": "Br" }
+  steps: [
+    {
+      species: { role: "MoleculeKey", ... },
+      arrows:  [ { curved: true, from: "role.atom", to: "role.atom" }, ... ]
+    }
   ]
 }
 ```
-This representation intentionally separates chemical meaning from visual layout.
 
-## Renderer design
+Responsibilities:
+- Tokenize and structure `.mech` source
+- Emit `console.warn` on malformed input — never throw
+- Produce no visual or geometric information
+- Perform no chemistry validation
 
-The renderer consumes the AST and generates an SVG diagram.
+### `src/molecules.js`
 
-## Key design decisions:
+A static registry of molecule definitions keyed by canonical name.
+```js
+export const moleculeRegistry = {
+  "CH3-Br": {
+    atoms: { C: { x: 0, y: 0 }, Br: { x: 40, y: 0 } },
+    bonds: [["C", "Br"]],
+    charge: 0
+  },
+  ...
+}
+```
 
-rendering is entirely driven by the AST
+Each molecule entry contains:
+- `atoms` — keyed by atom symbol (or alias like `Ca`, `Cb`), each with relative `{x, y}`
+- `bonds` — array of `[atomA, atomB]` for single or `[atomA, atomB, 2]` for double bonds
+- `charge` — integer (-1, 0, 1)
+- `labels` (optional) — display name overrides for aliased atoms (`Ca → "C"`)
 
-molecule labels are not hardcoded
+Coordinates are heuristic and template-driven. No chemistry inference.
 
-arrow placement is determined by semantic intent rather than exact geometry
+### `src/render.js`
 
-At the current stage, arrow positioning uses simple heuristic mappings from semantic targets (e.g. "OH", "C", "Br") to approximate locations in the diagram.
+Consumes the AST and molecule registry. Produces a complete SVG string.
 
-This approach prioritizes correctness of meaning over visual accuracy.
+Responsibilities:
+- Resolve role aliases to molecule registry keys
+- Compute step layout (vertical or horizontal)
+- Render molecule bonds and atom labels
+- Render mechanism arrows (direction strictly from AST)
+- Compute dynamic canvas dimensions
+- Write output to `out/`
 
-## Design tradeoffs and limitations
+---
 
-Several limitations are intentional at this stage:
+## `.mech` Syntax
+```
+step {
+  species:
+    role = MoleculeKey
 
-no automated atom positioning
+  arrow(
+    curved,
+    from = role.atomLabel,
+    to   = role.atomLabel
+  )
+}
+```
 
-no bond geometry calculations
+- One `step {}` block per mechanism step
+- `species:` maps role names to molecule registry keys
+- `arrow()` targets use dot notation: `role.atomLabel`
+- Bond midpoints: `role.A-B` (resolves to atom A)
+- Multiple arrows per step supported
 
-no chemical validation
+---
 
-limited support for multi-step mechanisms
+## Layout Modes
 
-These tradeoffs keep the architecture simple and make the semantics of the language explicit.
+### Vertical (default)
+- Steps arranged top-to-bottom
+- Molecules spread left-to-right within each step row
+- Canvas height scales with step count
 
-Future improvements can build on this foundation without changing the core pipeline.
+### Horizontal (`--layout=horizontal`)
+- Steps arranged left-to-right
+- Molecules stack top-to-bottom within each step column
+- Canvas width scales with step count
 
-## Future directions
+---
 
-Planned architectural improvements include:
+## Arrow Direction Contract
 
-refining the AST to better represent molecular structure
+Arrow direction is **always derived from the AST**, never from geometry.
 
-supporting multiple arrows and reaction steps
+- `from` atom coords → SVG path start (`M x1 y1`)
+- `to` atom coords → SVG path end (where `marker-end` lands)
+- Bowing direction (upward vs rightward) is geometry-based
+- Start and end points are **never swapped** for any reason
 
-improving renderer layout logic
+---
 
-adding alternative renderers or analysis tools
+## Key Constants (`render.js`)
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `STEP_Y_GAP` | 240 | Vertical distance between steps |
+| `STEP_X_GAP` | 260 | Horizontal distance between steps |
+| `MOLECULE_X_GAP` | 180 | Horizontal distance between molecules |
+| `MOLECULE_Y_GAP` | 100 | Vertical distance between molecules |
+| `STEP_Y_ORIGIN` | 140 | Y start position of first step |
+| `STEP_X_ORIGIN` | 120 | X start position of first step |
+| `PADDING` | 80 | Canvas edge padding |
+
+---
+
+## Output
+
+- Default: `out/<filename>.svg`
+- Horizontal: `out/<filename>.horizontal.svg`
+- Directory created automatically if absent
+```
