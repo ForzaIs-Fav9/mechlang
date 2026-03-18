@@ -1,14 +1,18 @@
 # MechLang Execution Roadmap
 
-This document records the locked execution plan for mechlang.
-
+This document records the locked execution plan for MechLang.
 It exists to prevent scope drift and architectural regression.
+
+---
 
 ## North Star
 
-A student should be able to write organic reaction mechanisms as easily as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
+A student should be able to write organic reaction mechanisms as easily
+as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 
-## Phase 0 — Foundations (Completed)
+---
+
+## Phase 0 — Foundations ✅ Completed
 
 - DSL parsing
 - AST construction
@@ -17,7 +21,9 @@ A student should be able to write organic reaction mechanisms as easily as LaTeX
 - SVG output
 - CLI execution
 
-## Phase 1 — Structural Intelligence (Completed)
+---
+
+## Phase 1 — Structural Intelligence ✅ Completed
 
 - Atom awareness
 - Atom-based arrow anchors
@@ -25,44 +31,116 @@ A student should be able to write organic reaction mechanisms as easily as LaTeX
 - Arrow normalization
 - Stability and fallback behavior
 
-## Phase 2 — Chemistry Drawing (Active)
+---
 
-### D.1 — Bond Rendering
+## Phase 2 — Chemistry Drawing ✅ Completed
+
+### D.1 — Bond Rendering ✅
 - Single bonds only
 - Straight lines
 - Template-driven
 - No angles, no inference
 
-### D.2 — Atom Labels
-- Atom symbols replace molecule text
-- Molecule labels retained as fallback
-- Charges added later
+### D.2 — Atom Labels ✅
+- Atom symbols rendered directly
+- White background rect punches through bond lines
+- Label aliasing for duplicate-atom molecules (Ca/Cb → "C")
 
-### D.3 — Arrow-to-Bond Intelligence
-- Arrow endpoints snap to bonds where appropriate
+### D.3 — Arrow-to-Bond Intelligence ✅
+- Arrow endpoints snap to named atoms via dot notation (`role.atom`)
+- Bond midpoint targeting via `role.A-B`
 
-### D.4 — Multiple Arrows
-- Multi-step mechanisms
-- Independent arrow objects
+### D.4 — Multiple Arrows ✅
+- Multi-step mechanisms via `step {}` blocks
+- Step-local arrow resolution
+- Role-scoped species definitions
 
-### D.5 — Charges
+### D.5 — Charges ✅
 - Visual-only annotations
-- Superscripted symbols
+- Superscripted +/− symbols
+- Offset from first atom
 
-## Phase 3 — Usability
+### D.6 — Double Bonds ✅
+- C=C and C=O rendering via bond order field `[A, B, 2]`
+- Perpendicular parallel line offset
+- Backward compatible — single bonds unchanged
 
-- Shorthand syntax
-- Smarter defaults
-- Teaching-oriented error messages
-- Documentation polish
+---
 
-## Phase 4 — Advanced Features
+## Phase 3 — Layout & Multi-Step ✅ Completed
 
-- Rings
-- Multiple bond types
-- Resonance
-- Stereochemistry
-- Export formats
-- Editor tooling
+### L.1 — Vertical Step Layout ✅
+- Deterministic step-per-row positioning
+- Dynamic canvas height
 
-This roadmap is authoritative and intentionally conservative.
+### L.2 — Horizontal Step Layout ✅
+- `--layout=horizontal` CLI flag
+- Steps flow left-to-right
+- Dynamic canvas width
+
+### L.3 — Molecule Registry ✅
+- 25 molecules across 6 categories
+- Standalone `molecules.js`
+- Alias resolution: role names → registry keys
+
+---
+
+## Phase 4 — Renderer Intelligence (Active)
+
+### R.1 — Species Persistence
+- Carry molecules across steps without redeclaration
+- Intermediate tracking (carbocation, alkoxide, etc.)
+
+### R.2 — Lane Assignment
+- Prevent molecule overlap in dense multi-step diagrams
+- Deterministic horizontal/vertical lane allocation
+
+### R.3 — Arrow Collision Detection
+- Detect and resolve overlapping curved arrows
+- Per-arrow index stagger already in place — extend to full collision engine
+
+### R.4 — Resonance Arrow
+- Dedicated double-headed arrow type (`<->`)
+- Distinct from mechanism arrows
+
+---
+
+## Phase 5 — Hardening
+
+### H.1 — Formal Grammar
+- BNF or PEG grammar document for `.mech` syntax
+- AST versioning
+
+### H.2 — Snapshot Tests
+- Golden SVG outputs for all 6 canonical mechanisms
+- CI regression on every merge
+
+---
+
+## Phase 6 — Public Launch (v1.0)
+
+### Six canonical mechanisms must render correctly:
+1. SN2 — single step, 2 arrows, charges
+2. SN1 — 2-step, carbocation intermediate, species persistence
+3. E2 — 3 concurrent arrows, C=C double bond product
+4. Acid-Base — H+ rendering, charge transfer
+5. Carbonyl Addition — C=O double bond, alkoxide product
+6. Resonance — double-headed arrow, delocalization
+
+### Deliverables:
+- CLI packaging (`npm install -g mechlang`)
+- Web playground (browser-based `.mech` → SVG)
+- Full documentation
+- Public announcement
+
+---
+
+## Out of Scope for v1.0
+
+- Rings and aromaticity
+- Stereochemistry (wedge/dash bonds)
+- Triple bonds
+- 3D conformation
+- Editor tooling / LSP
+- Rust/WASM rewrite (deferred to post-v1.0)
+```
