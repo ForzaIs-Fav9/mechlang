@@ -1,98 +1,120 @@
-# Design Decisions
+# MechLang Design Decisions
 
-This document outlines the key design decisions behind mechlang and the reasoning for its current scope and architecture.
-
-The goal of mechlang is not to be a complete chemistry drawing tool, but to explore how organic reaction mechanisms can be represented semantically as structured data.
-
----
-
-## Why a text-based language?
-
-mechlang represents reaction mechanisms using text rather than direct graphical manipulation.
-
-This choice was made to:
-- preserve chemical meaning independent of visual layout
-- enable version control and reproducibility
-- allow mechanisms to be parsed, analyzed, and transformed programmatically
-
-Textual representations make the underlying semantics explicit, whereas drawings encode meaning implicitly in geometry.
+This document records the *why* behind non-obvious architectural choices.
+Each decision is permanent until explicitly revisited and documented here.
 
 ---
 
-## Why a compiler-style pipeline?
+## 1. Semantic roles over molecule names in `.mech` files
 
-mechlang is structured as a pipeline:
+**Decision:** `.mech` files use role names (`nucleophile`, `substrate`)
+mapped to registry keys (`CN-`, `CH3-Br`), not molecule names directly.
 
-.me ch → parser → AST → renderer → SVG
-
-This separation allows:
-- parsing to focus purely on meaning
-- rendering to focus purely on presentation
-- future extensions (e.g. different renderers or analyses) without changing the language
-
-This mirrors the architecture of compilers and interpreters in other domains.
+**Why:** Mechanism diagrams communicate *function*, not identity.
+A researcher writing SN2 thinks in terms of nucleophile and electrophile,
+not CN- and CH3-Br. Role names make `.mech` files readable as chemistry,
+not as data. The registry handles the molecule details.
 
 ---
 
-## Why an explicit AST?
+## 2. Coordinates are heuristic, not chemically computed
 
-The abstract syntax tree (AST) serves as the single source of truth inside mechlang.
+**Decision:** Atom positions in `molecules.js` are manually specified
+relative offsets, not computed from bond lengths or angles.
 
-All rendering decisions are derived from the AST, not from hardcoded values.
-
-This ensures:
-- changes in the source language propagate automatically
-- semantics are preserved independently of output format
-- the system remains extensible
-
----
-
-## Why approximate geometry?
-
-The current renderer uses simple heuristic mappings from semantic intent (e.g. electron movement from a nucleophile to a carbon) to approximate visual positions.
-
-Precise molecular geometry is intentionally deferred.
-
-This decision prioritizes:
-- correctness of meaning over visual accuracy
-- clarity of architecture
-- reduced complexity at early stages
-
-Improving geometry can be done later without altering the core language.
+**Why:** Precise geometry (VSEPR, actual bond lengths) would require a
+full cheminformatics engine and would still look bad as SVG at mechanism
+scale. Heuristic positions are readable, predictable, and fast.
+MechLang is a communication tool, not a molecular visualizer.
 
 ---
 
-## Why limited chemical validation?
+## 3. Arrow direction is always AST-derived, never geometry-derived
 
-mechlang does not currently attempt to validate chemical correctness.
+**Decision:** The `from` and `to` coordinates for curved arrows are always
+taken directly from the AST. Geometry (dx, dy) only controls bowing
+direction — never which end the arrowhead lands on.
 
-This is intentional:
-- validation requires detailed molecular models
-- early validation risks coupling semantics to implementation details
-- the focus of the project is representation, not verification
-
-Validation can be layered on top of the existing architecture in the future.
-
----
-
-## Why stop at single-step mechanisms?
-
-Initial support is limited to single-step reactions to keep the language and renderer simple.
-
-This allows:
-- faster iteration
-- clearer semantics
-- a stable foundation for extension
-
-Multi-step mechanisms are a natural future extension once the core model is solid.
+**Why:** Geometry-based sorting (e.g. "left atom = start") produces
+mechanistically incorrect arrows for vertical paths where the nucleophile
+is below the electrophile. Electron flow direction is chemistry, not layout.
+The `.mech` file is the source of truth.
 
 ---
 
-## Summary
+## 4. Bond order as optional third array element
 
-mechlang prioritizes:
-- semantic clarity
-- architectural simplicity
-- extensibility over completeness
+**Decision:** Bonds are encoded as `[atomA, atomB]` for single bonds
+and `[atomA, atomB, 2]` for double bonds.
 
-Each limitation is a deliberate design choice rather than an omission.
+**Why:** This extends the existing format with zero breaking changes.
+Missing third element defaults to 1. No new syntax, no migration needed.
+Triple bonds follow naturally as `[atomA, atomB, 3]` when required.
+
+---
+
+## 5. Atom label aliasing via `labels` map
+
+**Decision:** Molecules with duplicate atom symbols (e.g. two carbons)
+use internal keys `Ca`, `Cb` for unique addressing, with a separate
+`labels` map for display names (`{ Ca: "C", Cb: "C" }`).
+
+**Why:** JavaScript object keys must be unique. `{ C: ..., C: ... }`
+silently overwrites. Aliasing preserves unique addressability while
+rendering the correct chemical symbol. The renderer checks `mol.labels`
+before falling back to the key name.
+
+---
+
+## 6. White rect behind atom labels
+
+**Decision:** Each atom label is preceded by a white rectangle in the SVG.
+
+**Why:** Bond lines draw through atom positions. Without a background,
+labels are unreadable where bonds cross them. White rects punch a clean
+hole through bond geometry. This is standard practice in chemistry
+drawing software (ChemDraw, Marvin, Ketcher all do this).
+
+---
+
+## 7. Parser never throws
+
+**Decision:** `parse.js` emits `console.warn` for all malformed input
+and continues. It never throws.
+
+**Why:** A renderer that crashes on bad input is hostile to users learning
+the DSL. Graceful degradation (warn + skip) lets partially valid `.mech`
+files produce partial output, making errors visible and recoverable.
+
+---
+
+## 8. No npm dependencies
+
+**Decision:** MechLang has zero runtime dependencies. Everything is
+vanilla Node.js ESM.
+
+**Why:** The dependency graph being empty is a feature. Researchers and
+professors installing a CLI tool should not pull in hundreds of packages.
+Trust, security, and install speed all improve at zero dependencies.
+
+---
+
+## 9. One branch per feature, one commit per file
+
+**Decision:** All branches are created on GitHub. Each file change is a
+separate commit with a conventional commit message.
+
+**Why:** Clean history makes regression bisection trivial. Conventional
+commits enable automated changelog generation at v1.0.
+Single-file commits make PR review surgical rather than archaeological.
+
+---
+
+## 10. Rust/WASM rewrite deferred to post-v1.0
+
+**Decision:** The JS/Node.js implementation ships to v1.0. Rust rewrite
+is explicitly out of scope until after public launch.
+
+**Why:** Correctness before performance. The render pipeline is not a
+bottleneck at mechanism scale. Shipping a working, documented, tested
+v1.0 in JS is worth more than an unfinished Rust rewrite.
