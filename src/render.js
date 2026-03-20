@@ -177,8 +177,9 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
 
   let cx, cy;
   if (dx === 0) {
-    // vertical arrow (within-step) — bow left
-    cx = x1 - offset;
+    // vertical arrow (within-step) — alternate left/right to avoid S-curves
+    const side = arrowIndex % 2 === 0 ? -1 : 1;
+    cx = x1 + side * offset;
     cy = (y1 + y2) / 2;
   } else if (dx >= dy) {
     // horizontal-ish — bow up
