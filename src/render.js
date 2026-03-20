@@ -33,20 +33,47 @@ function resolveMol(alias, step) {
 }
 
 // ─── Dot Notation Parser ──────────────────────────────────────────────────────
-function parseArrowRef(ref, step) {
+// Returns { alias, atomLabel, atomB }
+// For "substrate.C-Br": alias="substrate", atomLabel="C", atomB="Br"
+// For "nucleophile.O":  alias="nucleophile", atomLabel="O",  atomB=null
+function parseArrowRef(ref) {
   const dotIndex = ref.indexOf('.');
   if (dotIndex === -1) {
-    return { alias: ref, atomLabel: null };
+    return { alias: ref, atomLabel: null, atomB: null };
   }
-  const alias     = ref.slice(0, dotIndex);
-  const atomLabel = ref.slice(dotIndex + 1).split('-')[0];
-  return { alias, atomLabel };
+  const alias    = ref.slice(0, dotIndex);
+  const atomPart = ref.slice(dotIndex + 1);
+  const dashIdx  = atomPart.indexOf('-');
+  if (dashIdx === -1) {
+    return { alias, atomLabel: atomPart, atomB: null };
+  }
+  return {
+    alias,
+    atomLabel: atomPart.slice(0, dashIdx),
+    atomB:     atomPart.slice(dashIdx + 1),
+  };
 }
 
 // ─── Atom Position Lookup ─────────────────────────────────────────────────────
-function getAtomPos(mol, atomLabel) {
+// role = 'from': electrons LEAVE from bond midpoint (e.g. C-Br bond breaking)
+// role = 'to':   electrons ARRIVE at primary atom   (e.g. C being attacked)
+// This separation prevents consecutive arrows from sharing exact pixel endpoints,
+// which is the root cause of S-curves in multi-arrow steps.
+function getAtomPos(mol, ref, role = 'to') {
   if (!mol) return { x: 0, y: 0 };
-  if (atomLabel && mol.atoms[atomLabel]) return mol.atoms[atomLabel];
+
+  if (ref.atomB && mol.atoms[ref.atomLabel] && mol.atoms[ref.atomB]) {
+    const a = mol.atoms[ref.atomLabel];
+    const b = mol.atoms[ref.atomB];
+    if (role === 'from') {
+      // bond midpoint — where the electron pair lives before it moves
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
+    // 'to': the primary atom is the reaction center being attacked
+    return a;
+  }
+
+  if (ref.atomLabel && mol.atoms[ref.atomLabel]) return mol.atoms[ref.atomLabel];
   const first = Object.values(mol.atoms)[0];
   return first ?? { x: 0, y: 0 };
 }
@@ -72,10 +99,9 @@ function buildLaneMap(ast) {
 // ─── Position Computation (v0.12) ─────────────────────────────────────────────
 function computePositions(ast, horizontal, laneMap) {
   return ast.steps.map((step, si) => {
-    const aliases = Object.keys(step.species);
     const stepPos = {};
 
-    aliases.forEach((alias) => {
+    for (const alias of Object.keys(step.species)) {
       const molKey    = step.species[alias];
       const laneIndex = laneMap.has(molKey) ? laneMap.get(molKey) : 0;
 
@@ -90,7 +116,7 @@ function computePositions(ast, horizontal, laneMap) {
           y: STEP_Y_ORIGIN + si * STEP_Y_GAP,
         };
       }
-    });
+    }
 
     return stepPos;
   });
@@ -170,11 +196,9 @@ function renderMolecule(alias, step, ox, oy) {
 }
 
 // ─── Arrow Path ───────────────────────────────────────────────────────────────
-// For nearly-vertical arrows (within-step, dx < dy*0.5):
-//   - Use midpoint x as the base for cx so atom x-offsets don't escape this branch
-//   - Alternate left/right by arrowIndex so consecutive arrows fan apart
-//   - This guarantees the arrival tangent of arrow N matches the departure
-//     tangent of arrow N+1 at any shared midpoint — no S-curves
+// Nearly-vertical arrows (dx < dy*0.5) always bow LEFT.
+// Bond midpoint resolution in getAtomPos ensures consecutive arrows in the same
+// step never share exact pixel endpoints, so parallel left-bowing arcs are clean.
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const dx     = Math.abs(x2 - x1);
   const dy     = Math.abs(y2 - y1);
@@ -184,9 +208,8 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
 
   let cx, cy;
   if (dx < dy * 0.5) {
-    // nearly vertical (within-step) — alternate left/right from midpoint x
-    const side = arrowIndex % 2 === 0 ? -1 : 1;
-    cx = mx + side * offset;
+    // nearly vertical (within-step) — always bow left, deepen per arrow index
+    cx = mx - offset;
     cy = my;
   } else if (dx >= dy) {
     // horizontal-ish — bow up
@@ -231,13 +254,13 @@ function render(ast, horizontal) {
     for (let ai = 0; ai < step.arrows.length; ai++) {
       const arrow = step.arrows[ai];
 
-      const fromRef = parseArrowRef(arrow.from ?? '', step);
-      const toRef   = parseArrowRef(arrow.to   ?? '', step);
+      const fromRef = parseArrowRef(arrow.from ?? '');
+      const toRef   = parseArrowRef(arrow.to   ?? '');
 
       const fromMol     = resolveMol(fromRef.alias, step);
       const toMol       = resolveMol(toRef.alias,   step);
-      const fromAtomPos = getAtomPos(fromMol, fromRef.atomLabel);
-      const toAtomPos   = getAtomPos(toMol,   toRef.atomLabel);
+      const fromAtomPos = getAtomPos(fromMol, fromRef, 'from');
+      const toAtomPos   = getAtomPos(toMol,   toRef,   'to');
 
       const fromStepPos = stepPos[fromRef.alias];
       const toStepPos   = stepPos[toRef.alias];
