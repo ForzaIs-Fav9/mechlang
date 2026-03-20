@@ -173,13 +173,13 @@ function renderMolecule(alias, step, ox, oy) {
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const dx     = Math.abs(x2 - x1);
   const dy     = Math.abs(y2 - y1);
-  const offset = 60 + arrowIndex * 20;
+  const offset = 60 + arrowIndex * 30;
 
   let cx, cy;
   if (dx === 0) {
-    // vertical arrow (within-step) — alternate left/right to avoid S-curves
-    const side = arrowIndex % 2 === 0 ? -1 : 1;
-    cx = x1 + side * offset;
+    // vertical arrow (within-step, horizontal layout) — always bow left,
+    // deeper offset per arrow index so multiple arrows never share a control point
+    cx = x1 - offset;
     cy = (y1 + y2) / 2;
   } else if (dx >= dy) {
     // horizontal-ish — bow up
