@@ -53,11 +53,10 @@ function getAtomPos(mol, atomLabel) {
 
 // ─── Lane Map (v0.12) ─────────────────────────────────────────────────────────
 // Assigns each unique molecule key a fixed lane index by order of first appearance.
-// This is what gives species their "memory" across steps — a molecule seen in step 0
-// keeps its lane in step 3. Same key = same lane = same row/column forever.
+// Same key = same lane = same row/column forever across all steps.
 function buildLaneMap(ast) {
-  const laneMap  = new Map(); // molKey → laneIndex
-  let laneCount  = 0;
+  const laneMap = new Map();
+  let laneCount = 0;
 
   for (const step of ast.steps) {
     for (const molKey of Object.values(step.species)) {
@@ -71,8 +70,6 @@ function buildLaneMap(ast) {
 }
 
 // ─── Position Computation (v0.12) ─────────────────────────────────────────────
-// Uses laneMap so each molecule's position is derived from its permanent lane,
-// not its index within the current step.
 function computePositions(ast, horizontal, laneMap) {
   return ast.steps.map((step, si) => {
     const aliases = Object.keys(step.species);
@@ -179,10 +176,16 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const offset = 60 + arrowIndex * 20;
 
   let cx, cy;
-  if (dx >= dy) {
+  if (dx === 0) {
+    // vertical arrow (within-step) — bow left
+    cx = x1 - offset;
+    cy = (y1 + y2) / 2;
+  } else if (dx >= dy) {
+    // horizontal-ish — bow up
     cx = (x1 + x2) / 2;
     cy = Math.min(y1, y2) - offset;
   } else {
+    // diagonal-ish — bow right
     cx = Math.max(x1, x2) + offset;
     cy = (y1 + y2) / 2;
   }
@@ -197,8 +200,8 @@ function renderStepArrow(x, y) {
 
 // ─── Main Render ──────────────────────────────────────────────────────────────
 function render(ast, horizontal) {
-  const laneMap           = buildLaneMap(ast);                          // v0.12: build once
-  const positions         = computePositions(ast, horizontal, laneMap); // v0.12: lane-aware
+  const laneMap           = buildLaneMap(ast);
+  const positions         = computePositions(ast, horizontal, laneMap);
   const { width, height } = computeCanvas(positions);
 
   let body = `
