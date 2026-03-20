@@ -170,25 +170,32 @@ function renderMolecule(alias, step, ox, oy) {
 }
 
 // ─── Arrow Path ───────────────────────────────────────────────────────────────
+// For nearly-vertical arrows (within-step, dx < dy*0.5):
+//   - Use midpoint x as the base for cx so atom x-offsets don't escape this branch
+//   - Alternate left/right by arrowIndex so consecutive arrows fan apart
+//   - This guarantees the arrival tangent of arrow N matches the departure
+//     tangent of arrow N+1 at any shared midpoint — no S-curves
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const dx     = Math.abs(x2 - x1);
   const dy     = Math.abs(y2 - y1);
   const offset = 60 + arrowIndex * 30;
+  const mx     = (x1 + x2) / 2;
+  const my     = (y1 + y2) / 2;
 
   let cx, cy;
-  if (dx === 0) {
-    // vertical arrow (within-step, horizontal layout) — always bow left,
-    // deeper offset per arrow index so multiple arrows never share a control point
-    cx = x1 - offset;
-    cy = (y1 + y2) / 2;
+  if (dx < dy * 0.5) {
+    // nearly vertical (within-step) — alternate left/right from midpoint x
+    const side = arrowIndex % 2 === 0 ? -1 : 1;
+    cx = mx + side * offset;
+    cy = my;
   } else if (dx >= dy) {
     // horizontal-ish — bow up
-    cx = (x1 + x2) / 2;
+    cx = mx;
     cy = Math.min(y1, y2) - offset;
   } else {
     // diagonal-ish — bow right
     cx = Math.max(x1, x2) + offset;
-    cy = (y1 + y2) / 2;
+    cy = my;
   }
 
   return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
