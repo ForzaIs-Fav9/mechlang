@@ -51,21 +51,45 @@ function getAtomPos(mol, atomLabel) {
   return first ?? { x: 0, y: 0 };
 }
 
-// ─── Position Computation ─────────────────────────────────────────────────────
-function computePositions(ast, horizontal) {
+// ─── Lane Map (v0.12) ─────────────────────────────────────────────────────────
+// Assigns each unique molecule key a fixed lane index by order of first appearance.
+// This is what gives species their "memory" across steps — a molecule seen in step 0
+// keeps its lane in step 3. Same key = same lane = same row/column forever.
+function buildLaneMap(ast) {
+  const laneMap  = new Map(); // molKey → laneIndex
+  let laneCount  = 0;
+
+  for (const step of ast.steps) {
+    for (const molKey of Object.values(step.species)) {
+      if (!laneMap.has(molKey)) {
+        laneMap.set(molKey, laneCount++);
+      }
+    }
+  }
+
+  return laneMap;
+}
+
+// ─── Position Computation (v0.12) ─────────────────────────────────────────────
+// Uses laneMap so each molecule's position is derived from its permanent lane,
+// not its index within the current step.
+function computePositions(ast, horizontal, laneMap) {
   return ast.steps.map((step, si) => {
     const aliases = Object.keys(step.species);
     const stepPos = {};
 
-    aliases.forEach((alias, mi) => {
+    aliases.forEach((alias) => {
+      const molKey    = step.species[alias];
+      const laneIndex = laneMap.has(molKey) ? laneMap.get(molKey) : 0;
+
       if (horizontal) {
         stepPos[alias] = {
           x: STEP_X_ORIGIN + si * STEP_X_GAP,
-          y: STEP_Y_ORIGIN + mi * MOLECULE_Y_GAP,
+          y: STEP_Y_ORIGIN + laneIndex * MOLECULE_Y_GAP,
         };
       } else {
         stepPos[alias] = {
-          x: STEP_X_ORIGIN + mi * MOLECULE_X_GAP,
+          x: STEP_X_ORIGIN + laneIndex * MOLECULE_X_GAP,
           y: STEP_Y_ORIGIN + si * STEP_Y_GAP,
         };
       }
@@ -125,7 +149,7 @@ function renderMolecule(alias, step, ox, oy) {
     }
   }
 
-   // Atom labels — white background punches through bond lines
+  // Atom labels — white background punches through bond lines
   for (const [key, pos] of Object.entries(mol.atoms)) {
     const label = (mol.labels && mol.labels[key]) ? mol.labels[key] : key;
     const lx    = ox + pos.x;
@@ -173,7 +197,8 @@ function renderStepArrow(x, y) {
 
 // ─── Main Render ──────────────────────────────────────────────────────────────
 function render(ast, horizontal) {
-  const positions         = computePositions(ast, horizontal);
+  const laneMap           = buildLaneMap(ast);                          // v0.12: build once
+  const positions         = computePositions(ast, horizontal, laneMap); // v0.12: lane-aware
   const { width, height } = computeCanvas(positions);
 
   let body = `
