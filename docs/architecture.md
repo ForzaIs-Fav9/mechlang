@@ -176,4 +176,3 @@ Arrow direction is **always derived from the AST**, never from geometry.
 - Default: `out/<filename>.svg`
 - Horizontal: `out/<filename>.horizontal.svg`
 - Directory created automatically if absent
-```
