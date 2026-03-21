@@ -118,3 +118,31 @@ is explicitly out of scope until after public launch.
 **Why:** Correctness before performance. The render pipeline is not a
 bottleneck at mechanism scale. Shipping a working, documented, tested
 v1.0 in JS is worth more than an unfinished Rust rewrite.
+
+---
+
+## 11. Persistence is a parser concern, not a renderer concern
+
+**Decision:** Species persistence is resolved entirely in `parse.js`
+via a post-pass. `render.js` receives only a fully resolved species map
+per step and has no knowledge that persistence exists.
+
+**Why:** The renderer's contract is step-local semantics — it draws
+what it's given. Injecting persistence logic into the renderer would
+couple layout decisions to carry-forward state, making both harder to
+reason about. The parser resolves all cross-step references before
+geometry begins. Clean pipeline, clean separation.
+
+---
+
+## 12. Explicit `persist:` over implicit carry-forward
+
+**Decision:** Species that survive across steps must be explicitly
+declared with `persist: alias1, alias2` in the receiving step.
+Implicit carry-forward (all species live until dropped) was rejected.
+
+**Why:** MechLang's design contract is deterministic and step-local.
+Implicit carry creates hidden state — a reader cannot know what's on
+canvas without tracing backwards through all prior steps. Explicit
+`persist:` keeps every step self-documenting. The overhead is minimal:
+one line per step, comma-separated for multiple aliases.
