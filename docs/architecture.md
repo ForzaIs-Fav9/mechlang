@@ -9,7 +9,7 @@ responsibilities of each component in the pipeline.
 ```
 .mech source file
       ↓
-  parse.js        → AST
+  parse.js        → AST (with persistence post-pass)
       ↓
   render.js       → SVG string
       ↓
@@ -31,7 +31,8 @@ Reads a `.mech` source string and produces an AST of the form:
   steps: [
     {
       species: { role: "MoleculeKey", ... },
-      arrows:  [ { curved: true, from: "role.atom", to: "role.atom" }, ... ]
+      arrows:  [ { curved: true, from: "role.atom", to: "role.atom" }, ... ],
+      persist: [ "role", ... ]
     }
   ]
 }
@@ -39,6 +40,9 @@ Reads a `.mech` source string and produces an AST of the form:
 
 Responsibilities:
 - Tokenize and structure `.mech` source
+- Parse `persist:` blocks and store raw aliases on each step
+- Run a post-pass after all steps are parsed — resolve persisted aliases
+  against the previous step's species map and merge into current step
 - Emit `console.warn` on malformed input — never throw
 - Produce no visual or geometric information
 - Perform no chemistry validation
@@ -68,12 +72,15 @@ Coordinates are heuristic and template-driven. No chemistry inference.
 ### `src/render.js`
 
 Consumes the AST and molecule registry. Produces a complete SVG string.
+The renderer is fully blind to persistence mechanics — it sees only a
+fully resolved species map per step.
 
 Responsibilities:
 - Resolve role aliases to molecule registry keys
-- Compute step layout (vertical or horizontal)
+- Build a global lane map for species ordering
+- Compute per-step compact positions using local re-indexing
 - Render molecule bonds and atom labels
-- Render mechanism arrows (direction strictly from AST)
+- Render mechanism arrows with bond midpoint resolution
 - Compute dynamic canvas dimensions
 - Write output to `out/`
 
@@ -82,9 +89,9 @@ Responsibilities:
 ## `.mech` Syntax
 ```
 step {
+  persist: role1, role2
   species:
     role = MoleculeKey
-
   arrow(
     curved,
     from = role.atomLabel,
@@ -94,9 +101,10 @@ step {
 ```
 
 - One `step {}` block per mechanism step
+- `persist:` carries named roles forward from the previous step (comma-separated)
 - `species:` maps role names to molecule registry keys
 - `arrow()` targets use dot notation: `role.atomLabel`
-- Bond midpoints: `role.A-B` (resolves to atom A)
+- Bond midpoints: `role.A-B` — `from` resolves to bond midpoint, `to` resolves to atom A
 - Multiple arrows per step supported
 
 ---
@@ -115,13 +123,36 @@ step {
 
 ---
 
+## Species Persistence (v0.12)
+
+Molecules may be carried across steps using `persist:`:
+```
+step {
+  species:
+    nuc = CN-
+    sub = CH3-Br
+}
+step {
+  persist: nuc
+  species:
+    product = CH3-CN
+    leaving = Br-
+}
+```
+
+The post-pass in `parse.js` resolves `nuc` from step 1's species map
+and injects it into step 2's species map before render. The renderer
+sees a complete, self-contained species map per step — no hidden state.
+
+---
+
 ## Arrow Direction Contract
 
 Arrow direction is **always derived from the AST**, never from geometry.
 
 - `from` atom coords → SVG path start (`M x1 y1`)
 - `to` atom coords → SVG path end (where `marker-end` lands)
-- Bowing direction (upward vs rightward) is geometry-based
+- Bowing direction (upward vs leftward) is geometry-based
 - Start and end points are **never swapped** for any reason
 
 ---
