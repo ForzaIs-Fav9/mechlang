@@ -9,8 +9,9 @@ step {
   )
 }
 step {
+  persist: nuc
   species:
-    nuc     = CN-
     product = CH3-CN
     leaving = Br-
 }
+```
