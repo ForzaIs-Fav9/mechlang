@@ -5,6 +5,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.12.0] — 2026-03-21
+
+### Added
+- `persist:` keyword in `.mech` syntax — comma-separated aliases carried forward from previous step
+- Species persistence post-pass in `parse.js` — resolves persisted aliases against prior step's species map before render
+- Per-step compact lane re-indexing in `render.js` — persistent species sorted first by global lane order, new species packed consecutively
+- `buildLaneMap()` in `render.js` — assigns each unique molecule key a global lane index by first appearance
+- `persistence_test.mech` — canonical example demonstrating persist: syntax across two steps
+- Bond midpoint resolution in `getAtomPos()` — `from` role resolves to bond midpoint, `to` role resolves to primary atom
+
+### Fixed
+- S-curve on multi-arrow single-step mechanisms — root cause was consecutive arrows sharing exact pixel endpoints; bond midpoint resolution separates them
+- Lane gap accumulation — new molecules in later steps no longer inherit accumulated global lane offsets
+- `parseArrowRef()` now returns `atomB` for bond refs like `C-Br`, enabling correct midpoint vs atom resolution
+- `sn2.mech` and `sn2_alt.mech` rewritten in current step block syntax — legacy `reaction {}` syntax removed
+
+### Changed
+- `computePositions()` now accepts `laneMap` parameter and uses per-step local re-indexing
+- `getAtomPos()` now accepts `role` parameter (`'from'` | `'to'`) for semantic position resolution
+- `parseArrowRef()` no longer accepts `step` parameter — pure string parsing only
+
+### Notes
+- `render.js` is fully blind to persistence mechanics — it sees only a resolved species map
+- Step-local semantics fully preserved — persistence is a parser concern, not a renderer concern
+- `persist:` aliases not found in previous step emit `console.warn` and are skipped gracefully
+- `persist:` aliases already declared in `species:` emit `console.warn` and are skipped gracefully
+
+---
+
 ## [0.11.0] — 2026-03-18
 
 ### Added

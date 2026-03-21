@@ -1,0 +1,16 @@
+step {
+  species:
+    nuc = CN-
+    sub = CH3-Br
+  arrow(
+    curved,
+    from = nuc.C,
+    to   = sub.C-Br
+  )
+}
+step {
+  persist: nuc
+  species:
+    product = CH3-CN
+    leaving = Br-
+}

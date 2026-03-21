@@ -2,13 +2,21 @@
  * parse.js — MechLang Parser
  *
  * Reads a .mech source string and produces an AST of the form:
- *   { steps: [ { species: {}, arrows: [] }, ... ] }
+ *   { steps: [ { species: {}, arrows: [], persist: [] }, ... ] }
  *
  * Design contract:
  *   - No visual or geometric information is produced here.
  *   - No chemistry validation is performed.
  *   - Unknown or malformed input emits console.warn and is skipped safely.
  *   - Parsing never throws; it degrades gracefully.
+ *
+ * Species persistence (v0.12):
+ *   - Each step may declare `persist: alias1, alias2, ...`
+ *   - After all steps are parsed, a post-pass resolves each persisted alias
+ *     against the previous step's species map and merges it into the current
+ *     step's species map.
+ *   - render.js sees only a fully resolved species map — it is completely
+ *     blind to persistence mechanics. Step-local semantics are preserved.
  */
 
 export function parseMechlang(input) {
@@ -25,7 +33,7 @@ export function parseMechlang(input) {
 
     // ── Step open ──────────────────────────────────────────────────────────
     if (line === "step {") {
-      currentStep = { species: {}, arrows: [] };
+      currentStep = { species: {}, arrows: [], persist: [] };
       ast.steps.push(currentStep);
       mode = null;
       continue;
@@ -41,6 +49,15 @@ export function parseMechlang(input) {
     // ── Guard: must be inside a step ───────────────────────────────────────
     if (!currentStep) {
       console.warn(`[mechlang] Line outside step block ignored: "${line}"`);
+      continue;
+    }
+
+    // ── Persist block ──────────────────────────────────────────────────────
+    if (line.startsWith("persist:")) {
+      const raw     = line.slice("persist:".length).trim();
+      const aliases = raw.split(",").map(a => a.trim()).filter(Boolean);
+      currentStep.persist.push(...aliases);
+      mode = null;
       continue;
     }
 
@@ -76,8 +93,8 @@ export function parseMechlang(input) {
         continue;
       }
       const eqIndex = line.indexOf("=");
-      const key = line.slice(0, eqIndex).trim();
-      const value = line.slice(eqIndex + 1).trim();
+      const key     = line.slice(0, eqIndex).trim();
+      const value   = line.slice(eqIndex + 1).trim();
       if (!key || !value) {
         console.warn(`[mechlang] Empty species key or value: "${line}"`);
         continue;
@@ -121,6 +138,32 @@ export function parseMechlang(input) {
 
     // ── Fallthrough ────────────────────────────────────────────────────────
     console.warn(`[mechlang] Unrecognized line (no active mode): "${line}"`);
+  }
+
+  // ── Species persistence post-pass (v0.12) ─────────────────────────────────
+  // Resolves each persisted alias against the previous step's species map.
+  // Merges resolved molKeys into the current step's species map.
+  // render.js sees only the final resolved species map — persistence is
+  // invisible to the renderer. Step-local semantics are fully preserved.
+  for (let i = 1; i < ast.steps.length; i++) {
+    const prev = ast.steps[i - 1];
+    const curr = ast.steps[i];
+
+    for (const alias of curr.persist) {
+      if (curr.species[alias]) {
+        console.warn(
+          `[mechlang] persist alias "${alias}" already declared in species block — skipping.`
+        );
+        continue;
+      }
+      if (!prev.species[alias]) {
+        console.warn(
+          `[mechlang] persist alias "${alias}" not found in previous step — skipping.`
+        );
+        continue;
+      }
+      curr.species[alias] = prev.species[alias];
+    }
   }
 
   if (ast.steps.length === 0) {

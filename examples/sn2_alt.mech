@@ -1,7 +1,16 @@
-reaction {
-  reactants: CH3-Cl + CN-
-  products: CH3-CN + Cl-
+step {
+  species:
+    nucleophile = CN-
+    substrate   = CH3-Cl
+    leaving     = Cl-
+  arrow(
+    curved,
+    from = nucleophile.C,
+    to   = substrate.C-Cl
+  )
+  arrow(
+    curved,
+    from = substrate.C-Cl,
+    to   = leaving.Cl
+  )
 }
-
-arrow(curved, from=CN:, to=C)
-arrow(curved, from=C-Cl, to=Cl)

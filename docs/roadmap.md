@@ -13,7 +13,6 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 ---
 
 ## Phase 0 — Foundations ✅ Completed
-
 - DSL parsing
 - AST construction
 - Molecule-level layout
@@ -24,7 +23,6 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 ---
 
 ## Phase 1 — Structural Intelligence ✅ Completed
-
 - Atom awareness
 - Atom-based arrow anchors
 - Semantic / visual separation
@@ -49,6 +47,7 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 ### D.3 — Arrow-to-Bond Intelligence ✅
 - Arrow endpoints snap to named atoms via dot notation (`role.atom`)
 - Bond midpoint targeting via `role.A-B`
+- `from` resolves to bond midpoint, `to` resolves to primary atom
 
 ### D.4 — Multiple Arrows ✅
 - Multi-step mechanisms via `step {}` blocks
@@ -79,7 +78,7 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 - Dynamic canvas width
 
 ### L.3 — Molecule Registry ✅
-- 25 molecules across 6 categories
+- 31 molecules across 6 categories
 - Standalone `molecules.js`
 - Alias resolution: role names → registry keys
 
@@ -87,25 +86,29 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 
 ## Phase 4 — Renderer Intelligence (Active)
 
-### R.1 — Species Persistence
-- Carry molecules across steps without redeclaration
-- Intermediate tracking (carbocation, alkoxide, etc.)
+### R.1 — Species Persistence ✅ (v0.12)
+- `persist: alias1, alias2` syntax in `.mech` files
+- Post-pass in `parse.js` resolves aliases against prior step
+- Renderer fully blind to persistence mechanics
+- Per-step compact lane re-indexing eliminates gap accumulation
 
-### R.2 — Lane Assignment
-- Prevent molecule overlap in dense multi-step diagrams
-- Deterministic horizontal/vertical lane allocation
+### R.2 — Lane Assignment ✅ (v0.12)
+- Global lane map by first appearance
+- Per-step local re-indexing: persistent first, novel packed after
+- No molecule overlap in multi-step diagrams
 
-### R.3 — Arrow Collision Detection
-- Detect and resolve overlapping curved arrows
-- Per-arrow index stagger already in place — extend to full collision engine
-
-### R.4 — Resonance Arrow
+### R.3 — Resonance Arrow (v0.13)
 - Dedicated double-headed arrow type (`<->`)
 - Distinct from mechanism arrows
+- New arrow type in parser + renderer
+
+### R.4 — Arrow Collision Detection (v0.15)
+- Detect and resolve overlapping curved arrows
+- Deferred until layout engine is stable
 
 ---
 
-## Phase 5 — Hardening
+## Phase 5 — Hardening (v0.14)
 
 ### H.1 — Formal Grammar
 - BNF or PEG grammar document for `.mech` syntax
@@ -131,16 +134,15 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 - CLI packaging (`npm install -g mechlang`)
 - Web playground (browser-based `.mech` → SVG)
 - Full documentation
+- Proper spatial layout engine
 - Public announcement
 
 ---
 
 ## Out of Scope for v1.0
-
 - Rings and aromaticity
 - Stereochemistry (wedge/dash bonds)
 - Triple bonds
 - 3D conformation
 - Editor tooling / LSP
 - Rust/WASM rewrite (deferred to post-v1.0)
-```

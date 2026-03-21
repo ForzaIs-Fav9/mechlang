@@ -33,39 +33,96 @@ function resolveMol(alias, step) {
 }
 
 // ─── Dot Notation Parser ──────────────────────────────────────────────────────
-function parseArrowRef(ref, step) {
+// Returns { alias, atomLabel, atomB }
+// For "substrate.C-Br": alias="substrate", atomLabel="C", atomB="Br"
+// For "nucleophile.O":  alias="nucleophile", atomLabel="O",  atomB=null
+function parseArrowRef(ref) {
   const dotIndex = ref.indexOf('.');
   if (dotIndex === -1) {
-    return { alias: ref, atomLabel: null };
+    return { alias: ref, atomLabel: null, atomB: null };
   }
-  const alias     = ref.slice(0, dotIndex);
-  const atomLabel = ref.slice(dotIndex + 1).split('-')[0];
-  return { alias, atomLabel };
+  const alias    = ref.slice(0, dotIndex);
+  const atomPart = ref.slice(dotIndex + 1);
+  const dashIdx  = atomPart.indexOf('-');
+  if (dashIdx === -1) {
+    return { alias, atomLabel: atomPart, atomB: null };
+  }
+  return {
+    alias,
+    atomLabel: atomPart.slice(0, dashIdx),
+    atomB:     atomPart.slice(dashIdx + 1),
+  };
 }
 
 // ─── Atom Position Lookup ─────────────────────────────────────────────────────
-function getAtomPos(mol, atomLabel) {
+// role = 'from': electrons LEAVE from bond midpoint (e.g. C-Br bond breaking)
+// role = 'to':   electrons ARRIVE at primary atom   (e.g. C being attacked)
+function getAtomPos(mol, ref, role = 'to') {
   if (!mol) return { x: 0, y: 0 };
-  if (atomLabel && mol.atoms[atomLabel]) return mol.atoms[atomLabel];
+
+  if (ref.atomB && mol.atoms[ref.atomLabel] && mol.atoms[ref.atomB]) {
+    const a = mol.atoms[ref.atomLabel];
+    const b = mol.atoms[ref.atomB];
+    if (role === 'from') {
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
+    return a;
+  }
+
+  if (ref.atomLabel && mol.atoms[ref.atomLabel]) return mol.atoms[ref.atomLabel];
   const first = Object.values(mol.atoms)[0];
   return first ?? { x: 0, y: 0 };
 }
 
-// ─── Position Computation ─────────────────────────────────────────────────────
-function computePositions(ast, horizontal) {
-  return ast.steps.map((step, si) => {
-    const aliases = Object.keys(step.species);
-    const stepPos = {};
+// ─── Lane Map ─────────────────────────────────────────────────────────────────
+// Assigns each unique molecule key a global lane index by first appearance.
+// Used only to determine relative ordering of persistent species within a step.
+function buildLaneMap(ast) {
+  const laneMap = new Map();
+  let laneCount = 0;
 
-    aliases.forEach((alias, mi) => {
+  for (const step of ast.steps) {
+    for (const molKey of Object.values(step.species)) {
+      if (!laneMap.has(molKey)) {
+        laneMap.set(molKey, laneCount++);
+      }
+    }
+  }
+
+  return laneMap;
+}
+
+// ─── Position Computation (v0.12) ─────────────────────────────────────────────
+// Per-step local re-indexing:
+//   - Persistent aliases sorted first by global lane order (visual consistency)
+//   - New aliases packed consecutively after persistent ones
+//   - Local index 0,1,2,... assigned to this sorted order
+// This eliminates lane gap accumulation — every step is compact regardless
+// of how many molecules existed in prior steps.
+function computePositions(ast, horizontal, laneMap) {
+  return ast.steps.map((step, si) => {
+    const stepPos    = {};
+    const persistSet = new Set(step.persist || []);
+    const aliases    = Object.keys(step.species);
+
+    // persistent aliases sorted by global lane (maintains relative order)
+    const persistent = aliases
+      .filter(a => persistSet.has(a))
+      .sort((a, b) => laneMap.get(step.species[a]) - laneMap.get(step.species[b]));
+
+    // new aliases in declaration order
+    const novel  = aliases.filter(a => !persistSet.has(a));
+    const sorted = [...persistent, ...novel];
+
+    sorted.forEach((alias, localIndex) => {
       if (horizontal) {
         stepPos[alias] = {
           x: STEP_X_ORIGIN + si * STEP_X_GAP,
-          y: STEP_Y_ORIGIN + mi * MOLECULE_Y_GAP,
+          y: STEP_Y_ORIGIN + localIndex * MOLECULE_Y_GAP,
         };
       } else {
         stepPos[alias] = {
-          x: STEP_X_ORIGIN + mi * MOLECULE_X_GAP,
+          x: STEP_X_ORIGIN + localIndex * MOLECULE_X_GAP,
           y: STEP_Y_ORIGIN + si * STEP_Y_GAP,
         };
       }
@@ -99,10 +156,8 @@ function renderMolecule(alias, step, ox, oy) {
 
   let svg = '';
 
-  // Bonds — [atomA, atomB] for single, [atomA, atomB, 2] for double
   for (const bond of (mol.bonds || [])) {
     const [aKey, bKey, order = 1] = bond;
-
     const a1 = mol.atoms[aKey];
     const a2 = mol.atoms[bKey];
     if (!a1 || !a2) continue;
@@ -125,7 +180,6 @@ function renderMolecule(alias, step, ox, oy) {
     }
   }
 
-   // Atom labels — white background punches through bond lines
   for (const [key, pos] of Object.entries(mol.atoms)) {
     const label = (mol.labels && mol.labels[key]) ? mol.labels[key] : key;
     const lx    = ox + pos.x;
@@ -135,7 +189,6 @@ function renderMolecule(alias, step, ox, oy) {
     svg += `<text x="${lx}" y="${ly}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
   }
 
-  // Charge label (offset from first atom)
   if (mol.charge && mol.charge !== 0) {
     const firstPos    = Object.values(mol.atoms)[0];
     const chargeLabel = mol.charge === 1  ? '+'
@@ -152,15 +205,20 @@ function renderMolecule(alias, step, ox, oy) {
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const dx     = Math.abs(x2 - x1);
   const dy     = Math.abs(y2 - y1);
-  const offset = 60 + arrowIndex * 20;
+  const offset = 60 + arrowIndex * 30;
+  const mx     = (x1 + x2) / 2;
+  const my     = (y1 + y2) / 2;
 
   let cx, cy;
-  if (dx >= dy) {
-    cx = (x1 + x2) / 2;
+  if (dx < dy * 0.5) {
+    cx = mx - offset;
+    cy = my;
+  } else if (dx >= dy) {
+    cx = mx;
     cy = Math.min(y1, y2) - offset;
   } else {
     cx = Math.max(x1, x2) + offset;
-    cy = (y1 + y2) / 2;
+    cy = my;
   }
 
   return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
@@ -173,7 +231,8 @@ function renderStepArrow(x, y) {
 
 // ─── Main Render ──────────────────────────────────────────────────────────────
 function render(ast, horizontal) {
-  const positions         = computePositions(ast, horizontal);
+  const laneMap           = buildLaneMap(ast);
+  const positions         = computePositions(ast, horizontal, laneMap);
   const { width, height } = computeCanvas(positions);
 
   let body = `
@@ -195,13 +254,13 @@ function render(ast, horizontal) {
     for (let ai = 0; ai < step.arrows.length; ai++) {
       const arrow = step.arrows[ai];
 
-      const fromRef = parseArrowRef(arrow.from ?? '', step);
-      const toRef   = parseArrowRef(arrow.to   ?? '', step);
+      const fromRef = parseArrowRef(arrow.from ?? '');
+      const toRef   = parseArrowRef(arrow.to   ?? '');
 
       const fromMol     = resolveMol(fromRef.alias, step);
       const toMol       = resolveMol(toRef.alias,   step);
-      const fromAtomPos = getAtomPos(fromMol, fromRef.atomLabel);
-      const toAtomPos   = getAtomPos(toMol,   toRef.atomLabel);
+      const fromAtomPos = getAtomPos(fromMol, fromRef, 'from');
+      const toAtomPos   = getAtomPos(toMol,   toRef,   'to');
 
       const fromStepPos = stepPos[fromRef.alias];
       const toStepPos   = stepPos[toRef.alias];

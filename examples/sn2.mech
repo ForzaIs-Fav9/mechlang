@@ -1,8 +1,16 @@
-reaction {
-  reactants: CH3-Br + CN-
-  products: CH3-OH + OH-
+step {
+  species:
+    nucleophile = OH-
+    substrate   = CH3-Br
+    leaving     = Br-
+  arrow(
+    curved,
+    from = nucleophile.O,
+    to   = substrate.C-Br
+  )
+  arrow(
+    curved,
+    from = substrate.C-Br,
+    to   = leaving.Br
+  )
 }
-
-+arrow(curved, from=OH:, to=Br)
-
-arrow(curved, from=C-Br, to=Br)
