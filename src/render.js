@@ -57,8 +57,6 @@ function parseArrowRef(ref) {
 // ─── Atom Position Lookup ─────────────────────────────────────────────────────
 // role = 'from': electrons LEAVE from bond midpoint (e.g. C-Br bond breaking)
 // role = 'to':   electrons ARRIVE at primary atom   (e.g. C being attacked)
-// This separation prevents consecutive arrows from sharing exact pixel endpoints,
-// which is the root cause of S-curves in multi-arrow steps.
 function getAtomPos(mol, ref, role = 'to') {
   if (!mol) return { x: 0, y: 0 };
 
@@ -66,10 +64,8 @@ function getAtomPos(mol, ref, role = 'to') {
     const a = mol.atoms[ref.atomLabel];
     const b = mol.atoms[ref.atomB];
     if (role === 'from') {
-      // bond midpoint — where the electron pair lives before it moves
       return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     }
-    // 'to': the primary atom is the reaction center being attacked
     return a;
   }
 
@@ -78,9 +74,9 @@ function getAtomPos(mol, ref, role = 'to') {
   return first ?? { x: 0, y: 0 };
 }
 
-// ─── Lane Map (v0.12) ─────────────────────────────────────────────────────────
-// Assigns each unique molecule key a fixed lane index by order of first appearance.
-// Same key = same lane = same row/column forever across all steps.
+// ─── Lane Map ─────────────────────────────────────────────────────────────────
+// Assigns each unique molecule key a global lane index by first appearance.
+// Used only to determine relative ordering of persistent species within a step.
 function buildLaneMap(ast) {
   const laneMap = new Map();
   let laneCount = 0;
@@ -97,26 +93,40 @@ function buildLaneMap(ast) {
 }
 
 // ─── Position Computation (v0.12) ─────────────────────────────────────────────
+// Per-step local re-indexing:
+//   - Persistent aliases sorted first by global lane order (visual consistency)
+//   - New aliases packed consecutively after persistent ones
+//   - Local index 0,1,2,... assigned to this sorted order
+// This eliminates lane gap accumulation — every step is compact regardless
+// of how many molecules existed in prior steps.
 function computePositions(ast, horizontal, laneMap) {
   return ast.steps.map((step, si) => {
-    const stepPos = {};
+    const stepPos    = {};
+    const persistSet = new Set(step.persist || []);
+    const aliases    = Object.keys(step.species);
 
-    for (const alias of Object.keys(step.species)) {
-      const molKey    = step.species[alias];
-      const laneIndex = laneMap.has(molKey) ? laneMap.get(molKey) : 0;
+    // persistent aliases sorted by global lane (maintains relative order)
+    const persistent = aliases
+      .filter(a => persistSet.has(a))
+      .sort((a, b) => laneMap.get(step.species[a]) - laneMap.get(step.species[b]));
 
+    // new aliases in declaration order
+    const novel  = aliases.filter(a => !persistSet.has(a));
+    const sorted = [...persistent, ...novel];
+
+    sorted.forEach((alias, localIndex) => {
       if (horizontal) {
         stepPos[alias] = {
           x: STEP_X_ORIGIN + si * STEP_X_GAP,
-          y: STEP_Y_ORIGIN + laneIndex * MOLECULE_Y_GAP,
+          y: STEP_Y_ORIGIN + localIndex * MOLECULE_Y_GAP,
         };
       } else {
         stepPos[alias] = {
-          x: STEP_X_ORIGIN + laneIndex * MOLECULE_X_GAP,
+          x: STEP_X_ORIGIN + localIndex * MOLECULE_X_GAP,
           y: STEP_Y_ORIGIN + si * STEP_Y_GAP,
         };
       }
-    }
+    });
 
     return stepPos;
   });
@@ -146,10 +156,8 @@ function renderMolecule(alias, step, ox, oy) {
 
   let svg = '';
 
-  // Bonds — [atomA, atomB] for single, [atomA, atomB, 2] for double
   for (const bond of (mol.bonds || [])) {
     const [aKey, bKey, order = 1] = bond;
-
     const a1 = mol.atoms[aKey];
     const a2 = mol.atoms[bKey];
     if (!a1 || !a2) continue;
@@ -172,7 +180,6 @@ function renderMolecule(alias, step, ox, oy) {
     }
   }
 
-  // Atom labels — white background punches through bond lines
   for (const [key, pos] of Object.entries(mol.atoms)) {
     const label = (mol.labels && mol.labels[key]) ? mol.labels[key] : key;
     const lx    = ox + pos.x;
@@ -182,7 +189,6 @@ function renderMolecule(alias, step, ox, oy) {
     svg += `<text x="${lx}" y="${ly}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
   }
 
-  // Charge label (offset from first atom)
   if (mol.charge && mol.charge !== 0) {
     const firstPos    = Object.values(mol.atoms)[0];
     const chargeLabel = mol.charge === 1  ? '+'
@@ -196,9 +202,6 @@ function renderMolecule(alias, step, ox, oy) {
 }
 
 // ─── Arrow Path ───────────────────────────────────────────────────────────────
-// Nearly-vertical arrows (dx < dy*0.5) always bow LEFT.
-// Bond midpoint resolution in getAtomPos ensures consecutive arrows in the same
-// step never share exact pixel endpoints, so parallel left-bowing arcs are clean.
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const dx     = Math.abs(x2 - x1);
   const dy     = Math.abs(y2 - y1);
@@ -208,15 +211,12 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
 
   let cx, cy;
   if (dx < dy * 0.5) {
-    // nearly vertical (within-step) — always bow left, deepen per arrow index
     cx = mx - offset;
     cy = my;
   } else if (dx >= dy) {
-    // horizontal-ish — bow up
     cx = mx;
     cy = Math.min(y1, y2) - offset;
   } else {
-    // diagonal-ish — bow right
     cx = Math.max(x1, x2) + offset;
     cy = my;
   }
