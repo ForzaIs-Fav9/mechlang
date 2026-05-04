@@ -3,7 +3,7 @@ import path from 'path';
 import { parseMechlang } from './parse.js';
 import { moleculeRegistry } from './molecules.js';
 
-// ─── Layout Constants ─────────────────────────────────────────────────────────
+// Layout Constants
 const STEP_Y_GAP     = 240;
 const STEP_X_GAP     = 260;
 const MOLECULE_X_GAP = 180;
@@ -12,10 +12,10 @@ const STEP_Y_ORIGIN  = 140;
 const STEP_X_ORIGIN  = 120;
 const PADDING        = 80;
 
-// ─── Collision Registry (v0.13) ───────────────────────────────────────────────
+// Collision Registry
 let LABEL_BOXES = [];
 
-// ─── CLI Args ─────────────────────────────────────────────────────────────────
+// CLI Args
 const args             = process.argv.slice(2);
 const mechFile         = args.find(a => !a.startsWith('--'));
 const layoutHorizontal = args.includes('--layout=horizontal');
@@ -25,17 +25,17 @@ if (!mechFile) {
   process.exit(1);
 }
 
-// ─── Parse ────────────────────────────────────────────────────────────────────
+// Parse
 const source = readFileSync(mechFile, 'utf8');
 const ast    = parseMechlang(source);
 
-// ─── Alias Resolution ─────────────────────────────────────────────────────────
+// Alias Resolution
 function resolveMol(alias, step) {
   const molKey = step.species[alias];
   return molKey ? moleculeRegistry[molKey] : null;
 }
 
-// ─── Dot Notation Parser ──────────────────────────────────────────────────────
+// Dot Notation Parser
 function parseArrowRef(ref) {
   const dotIndex = ref.indexOf('.');
   if (dotIndex === -1) {
@@ -57,7 +57,7 @@ function parseArrowRef(ref) {
   };
 }
 
-// ─── Atom Position Lookup ─────────────────────────────────────────────────────
+// Atom Position Lookup
 function getAtomPos(mol, ref, role = 'to') {
   if (!mol) return { x: 0, y: 0 };
 
@@ -80,7 +80,7 @@ function getAtomPos(mol, ref, role = 'to') {
   return first ?? { x: 0, y: 0 };
 }
 
-// ─── Lane Map ─────────────────────────────────────────────────────────────────
+// Lane Map
 function buildLaneMap(ast) {
   const laneMap = new Map();
   let laneCount = 0;
@@ -96,7 +96,7 @@ function buildLaneMap(ast) {
   return laneMap;
 }
 
-// ─── Position Computation ─────────────────────────────────────────────────────
+// Position Computation
 function computePositions(ast, horizontal, laneMap) {
   return ast.steps.map((step, si) => {
     const stepPos    = {};
@@ -128,7 +128,7 @@ function computePositions(ast, horizontal, laneMap) {
   });
 }
 
-// ─── Canvas Dimensions ────────────────────────────────────────────────────────
+// Canvas Dimensions
 function computeCanvas(positions) {
   let maxX = 0;
   let maxY = 0;
@@ -143,7 +143,7 @@ function computeCanvas(positions) {
   return { width: maxX + PADDING * 2, height: maxY + PADDING * 2 };
 }
 
-// ─── Molecule Renderer ────────────────────────────────────────────────────────
+// Molecule Renderer
 function renderMolecule(alias, step, ox, oy) {
   const molKey = step.species[alias];
   const mol    = molKey ? moleculeRegistry[molKey] : null;
@@ -156,7 +156,7 @@ function renderMolecule(alias, step, ox, oy) {
 
   // Bonds
   for (const bond of (mol.bonds || [])) {
-    const [aKey, bKey, order = 1] = bond;
+    const [aKey, bKey] = bond;
     const a1 = mol.atoms[aKey];
     const a2 = mol.atoms[bKey];
     if (!a1 || !a2) continue;
@@ -176,25 +176,47 @@ function renderMolecule(alias, step, ox, oy) {
     const ly    = oy + pos.y;
     const w     = label.length > 1 ? label.length * 9 : 14;
 
-    const box = { x: lx - w/2, y: ly - 9, width: w, height: 18 };
+    const box = {
+      x: lx - w / 2,
+      y: ly - 9,
+      width: w,
+      height: 18
+    };
+
     LABEL_BOXES.push(box);
 
     svg += `<rect x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" fill="white"/>`;
     svg += `<text x="${lx}" y="${ly}" font-size="14" text-anchor="middle">${label}</text>`;
   }
 
+  // Charge Rendering (RESTORED)
+  if (mol.charge && mol.charge !== 0) {
+    const firstPos = Object.values(mol.atoms)[0];
+
+    const chargeLabel =
+      mol.charge === 1  ? '+' :
+      mol.charge === -1 ? '−' :
+      mol.charge > 0    ? `${mol.charge}+` :
+                          `${Math.abs(mol.charge)}−`;
+
+    svg += `<text x="${ox + firstPos.x + 10}"
+                 y="${oy + firstPos.y - 12}"
+                 font-size="11"
+                 font-family="sans-serif">${chargeLabel}</text>`;
+  }
+
   return svg;
 }
 
-// ─── Bezier Sampling ──────────────────────────────────────────────────────────
+// Bezier Sampling
 function sampleQuadratic(x1, y1, cx, cy, x2, y2, t) {
   return {
-    x: (1 - t)**2 * x1 + 2*(1 - t)*t * cx + t**2 * x2,
-    y: (1 - t)**2 * y1 + 2*(1 - t)*t * cy + t**2 * y2
+    x: (1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2,
+    y: (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2
   };
 }
 
-// ─── Collision Check ──────────────────────────────────────────────────────────
+// Collision Check
 function pointInBox(p, box) {
   return (
     p.x >= box.x &&
@@ -204,7 +226,7 @@ function pointInBox(p, box) {
   );
 }
 
-// ─── Arrow Path + Collision Detection ─────────────────────────────────────────
+// Arrow Path + Collision Detection
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const offset = 60 + arrowIndex * 30;
   const mx = (x1 + x2) / 2;
@@ -213,7 +235,6 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const cx = mx - offset;
   const cy = my;
 
-  // 🔥 Collision Detection
   let collided = false;
 
   for (let t = 0; t <= 1; t += 0.05) {
@@ -228,15 +249,14 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   }
 
   if (collided) {
-    console.log("⚠️ Collision detected on arrow");
+    console.log("Collision detected on arrow");
   }
 
   return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
 }
 
-// ─── Main Render ──────────────────────────────────────────────────────────────
+// Main Render
 function render(ast, horizontal) {
-
   LABEL_BOXES = [];
 
   const laneMap           = buildLaneMap(ast);
@@ -284,7 +304,7 @@ function render(ast, horizontal) {
   return `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
 }
 
-// ─── Output ───────────────────────────────────────────────────────────────────
+// Output
 const svgContent = render(ast, layoutHorizontal);
 const baseName   = path.basename(mechFile, '.mech');
 const outPath    = `out/${baseName}.svg`;
