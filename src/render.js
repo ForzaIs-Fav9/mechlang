@@ -160,20 +160,32 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const base = 40 + arrowIndex * 20;
 
   const attempts = goingDown
-    ? [-base, -(base + 30), -(base + 60)]   // bow left
-    : [ base,  (base + 30),  (base + 60)];  // bow right
+    ? [-base, -(base + 30), -(base + 60)]
+    : [ base,  (base + 30),  (base + 60)];
+
+  console.log("---- ARROW DEBUG ----");
+  console.log("from:", x1, y1, "to:", x2, y2);
+  console.log("goingDown:", goingDown);
+  console.log("attempts:", attempts);
 
   for (const offset of attempts) {
     const cx = mx + offset;
     const cy = my;
 
-    if (!collides(x1, y1, cx, cy, x2, y2)) {
+    const hit = collides(x1, y1, cx, cy, x2, y2);
+
+    console.log("try offset:", offset, "collision:", hit);
+
+    if (!hit) {
+      console.log("chosen offset:", offset);
       return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
     }
   }
 
-  // fallback
   const fallback = goingDown ? -base - 90 : base + 90;
+
+  console.log("fallback used:", fallback);
+
   return `M ${x1} ${y1} Q ${mx + fallback} ${my} ${x2} ${y2}`;
 }
 
