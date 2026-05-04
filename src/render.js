@@ -154,38 +154,32 @@ function renderMolecule(alias, step, ox, oy) {
 
   let svg = '';
 
-  for (const bond of (mol.bonds || [])) {
-    const [aKey, bKey] = bond;
-    const a1 = mol.atoms[aKey];
-    const a2 = mol.atoms[bKey];
-    if (!a1 || !a2) continue;
+for (const bond of (mol.bonds || [])) {
+  const [aKey, bKey, order = 1] = bond;
 
-    const x1 = ox + a1.x;
-    const y1 = oy + a1.y;
-    const x2 = ox + a2.x;
-    const y2 = oy + a2.y;
+  const a1 = mol.atoms[aKey];
+  const a2 = mol.atoms[bKey];
+  if (!a1 || !a2) continue;
 
+  const x1 = ox + a1.x;
+  const y1 = oy + a1.y;
+  const x2 = ox + a2.x;
+  const y2 = oy + a2.y;
+
+  if (order === 2) {
+    const dx  = x2 - x1;
+    const dy  = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    const nx = (-dy / len) * 3;
+    const ny = (dx / len) * 3;
+
+    svg += `<line x1="${x1 + nx}" y1="${y1 + ny}" x2="${x2 + nx}" y2="${y2 + ny}" stroke="black" stroke-width="1.5"/>`;
+    svg += `<line x1="${x1 - nx}" y1="${y1 - ny}" x2="${x2 - nx}" y2="${y2 - ny}" stroke="black" stroke-width="1.5"/>`;
+  } else {
     svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="black" stroke-width="1.5"/>`;
   }
-
-  for (const [key, pos] of Object.entries(mol.atoms)) {
-    const label = key;
-    const lx = ox + pos.x;
-    const ly = oy + pos.y;
-    const w = label.length > 1 ? label.length * 9 : 14;
-
-    const box = {
-      x: lx - w / 2,
-      y: ly - 9,
-      width: w,
-      height: 18
-    };
-
-    LABEL_BOXES.push(box);
-
-    svg += `<rect x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" fill="white"/>`;
-    svg += `<text x="${lx}" y="${ly}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
-  }
+}
 
   if (mol.charge && mol.charge !== 0) {
     const firstPos = Object.values(mol.atoms)[0];
@@ -233,13 +227,15 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const my = (y1 + y2) / 2;
 
   const goingDown = y2 > y1;
+
   const base = 40 + arrowIndex * 20;
 
-  const attempts = goingDown
-    ? [-base, -(base + 30), -(base + 60), base, base + 30, base + 60]
-    : [base, base + 30, base + 60, -base, -(base + 30), -(base + 60)];
+  // LOCK SIDE
+  const preferredOffsets = goingDown
+    ? [-base, -(base + 30), -(base + 60), -(base + 90)]
+    : [ base,  (base + 30),  (base + 60),  (base + 90)];
 
-  for (const offset of attempts) {
+  for (const offset of preferredOffsets) {
     const cx = mx + offset;
     const cy = my;
 
@@ -248,7 +244,9 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
     }
   }
 
-  const fallback = goingDown ? -base - 90 : base + 90;
+  // fallback
+  const fallback = preferredOffsets[preferredOffsets.length - 1];
+
   return `M ${x1} ${y1} Q ${mx + fallback} ${my} ${x2} ${y2}`;
 }
 
