@@ -179,7 +179,7 @@ function renderMolecule(alias, step, ox, oy) {
   }
 
   for (const [key, pos] of Object.entries(mol.atoms)) {
-    const label = key;
+    const label = (mol.labels && mol.labels[key]) ? mol.labels[key] : key;
     const lx = ox + pos.x;
     const ly = oy + pos.y;
     const w = label.length > 1 ? label.length * 9 : 14;
@@ -242,33 +242,23 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
 
-  // Determine dominant direction
-  const dx = x2 - x1;
-  const dy = y2 - y1;
+  const dx = Math.abs(x2 - x1);
+  const dy = Math.abs(y2 - y1);
 
-  // LOCK SIDE (deterministic)
-  let direction;
+  const base = 28 + arrowIndex * 10;
+  const capped = Math.min(base, 48);
 
-  if (Math.abs(dy) > Math.abs(dx)) {
-    // Mostly vertical
-    direction = x2 >= x1 ? 1 : -1;
+  let offsets;
+
+  if (dx < dy * 0.75) {
+    offsets = [-capped, -(capped + 12), -(capped + 24), -(capped + 36)];
+  } else if (dy < dx * 0.75) {
+    offsets = [capped, capped + 12, capped + 24, capped + 36];
   } else {
-    // Mostly horizontal
-    direction = dy >= 0 ? -1 : 1;
+    offsets = [-capped, -(capped + 12), -(capped + 24), -(capped + 36)];
   }
 
-  const base = 30 + arrowIndex * 10;
-
-  const attempts = [
-    base,
-    base + 20,
-    base + 40,
-    base + 60
-  ];
-
-  for (const mag of attempts) {
-    const offset = direction * mag;
-
+  for (const offset of offsets) {
     const cx = mx + offset;
     const cy = my;
 
@@ -277,9 +267,7 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
     }
   }
 
-  // fallback: still same direction
-  const fallback = direction * (base + 80);
-
+  const fallback = offsets[0];
   return `M ${x1} ${y1} Q ${mx + fallback} ${my} ${x2} ${y2}`;
 }
 
