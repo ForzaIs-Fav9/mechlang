@@ -151,23 +151,32 @@ function collides(x1, y1, cx, cy, x2, y2) {
   return false;
 }
 
-function arrowPath(x1, y1, x2, y2, i) {
-  let offset = 60 + i * 30;
-  let attempts = 0;
+function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
 
-  while (attempts < 6) {
-    const cx = (x1 + x2)/2 - offset;
-    const cy = (y1 + y2)/2;
+  const base = 40 + arrowIndex * 20;
+  const attempts = [
+    -base,
+    base,
+    -(base + 30),
+    base + 30,
+    -(base + 60),
+    base + 60
+  ];
+
+  for (const offset of attempts) {
+    const cx = mx + offset;
+    const cy = my;
 
     if (!collides(x1, y1, cx, cy, x2, y2)) {
       return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
     }
-
-    offset += 30;
-    attempts++;
   }
 
-  return `M ${x1} ${y1} Q ${(x1+x2)/2 - offset} ${(y1+y2)/2} ${x2} ${y2}`;
+  // fallback (last attempt)
+  const cx = mx - (base + 90);
+  return `M ${x1} ${y1} Q ${cx} ${my} ${x2} ${y2}`;
 }
 
 function render(ast, horizontal) {
