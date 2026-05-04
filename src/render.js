@@ -242,41 +242,33 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
 
-  const dx = Math.abs(x2 - x1);
-  const dy = Math.abs(y2 - y1);
+  // Determine dominant direction
+  const dx = x2 - x1;
+  const dy = y2 - y1;
 
-  const base = 28 + arrowIndex * 10;
-  const capped = Math.min(base, 48);
+  // LOCK SIDE (deterministic)
+  let direction;
 
-  let attempts;
-
-  if (dx < dy * 0.75) {
-    const side = x2 >= x1 ? 1 : -1;
-    attempts = [
-      side * capped,
-      side * (capped + 12),
-      side * (capped + 24),
-      side * (capped + 36)
-    ];
-  } else if (dy < dx * 0.75) {
-    const side = y2 >= y1 ? 1 : -1;
-    attempts = [
-      side * capped,
-      side * (capped + 12),
-      side * (capped + 24),
-      side * (capped + 36)
-    ];
+  if (Math.abs(dy) > Math.abs(dx)) {
+    // Mostly vertical
+    direction = x2 >= x1 ? 1 : -1;
   } else {
-    const side = y2 >= y1 ? -1 : 1;
-    attempts = [
-      side * capped,
-      side * (capped + 12),
-      side * (capped + 24),
-      side * (capped + 36)
-    ];
+    // Mostly horizontal
+    direction = dy >= 0 ? -1 : 1;
   }
 
-  for (const offset of attempts) {
+  const base = 30 + arrowIndex * 10;
+
+  const attempts = [
+    base,
+    base + 20,
+    base + 40,
+    base + 60
+  ];
+
+  for (const mag of attempts) {
+    const offset = direction * mag;
+
     const cx = mx + offset;
     const cy = my;
 
@@ -285,7 +277,9 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
     }
   }
 
-  const fallback = attempts[0];
+  // fallback: still same direction
+  const fallback = direction * (base + 80);
+
   return `M ${x1} ${y1} Q ${mx + fallback} ${my} ${x2} ${y2}`;
 }
 
