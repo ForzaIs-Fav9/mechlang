@@ -166,72 +166,69 @@ function renderMolecule(alias, step, ox, oy) {
     const x2 = ox + a2.x;
     const y2 = oy + a2.y;
 
-    if (order === 2) {
-      const dx  = x2 - x1;
-      const dy  = y2 - y1;
-      const len = Math.sqrt(dx * dx + dy * dy) || 1;
-      const nx  = (-dy / len) * 3;
-      const ny  = (dx / len) * 3;
-
-      svg += `<line x1="${x1+nx}" y1="${y1+ny}" x2="${x2+nx}" y2="${y2+ny}" stroke="black" stroke-width="1.5"/>`;
-      svg += `<line x1="${x1-nx}" y1="${y1-ny}" x2="${x2-nx}" y2="${y2-ny}" stroke="black" stroke-width="1.5"/>`;
-    } else {
-      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="black" stroke-width="1.5"/>`;
-    }
+    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="black" stroke-width="1.5"/>`;
   }
 
-  // Labels + Bounding Boxes
+  // Labels + Boxes
   for (const [key, pos] of Object.entries(mol.atoms)) {
-    const label = (mol.labels && mol.labels[key]) ? mol.labels[key] : key;
+    const label = key;
     const lx    = ox + pos.x;
     const ly    = oy + pos.y;
     const w     = label.length > 1 ? label.length * 9 : 14;
 
-    const box = {
-      x: lx - w / 2,
-      y: ly - 9,
-      width: w,
-      height: 18
-    };
-
+    const box = { x: lx - w/2, y: ly - 9, width: w, height: 18 };
     LABEL_BOXES.push(box);
 
     svg += `<rect x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" fill="white"/>`;
-    svg += `<text x="${lx}" y="${ly}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
-  }
-
-  if (mol.charge && mol.charge !== 0) {
-    const firstPos = Object.values(mol.atoms)[0];
-    const chargeLabel = mol.charge === 1 ? '+' :
-                        mol.charge === -1 ? '−' :
-                        mol.charge > 0 ? `${mol.charge}+` :
-                        `${Math.abs(mol.charge)}−`;
-
-    svg += `<text x="${ox + firstPos.x + 10}" y="${oy + firstPos.y - 12}" font-size="11">${chargeLabel}</text>`;
+    svg += `<text x="${lx}" y="${ly}" font-size="14" text-anchor="middle">${label}</text>`;
   }
 
   return svg;
 }
 
-// ─── Arrow Path ───────────────────────────────────────────────────────────────
+// ─── Bezier Sampling ──────────────────────────────────────────────────────────
+function sampleQuadratic(x1, y1, cx, cy, x2, y2, t) {
+  return {
+    x: (1 - t)**2 * x1 + 2*(1 - t)*t * cx + t**2 * x2,
+    y: (1 - t)**2 * y1 + 2*(1 - t)*t * cy + t**2 * y2
+  };
+}
+
+// ─── Collision Check ──────────────────────────────────────────────────────────
+function pointInBox(p, box) {
+  return (
+    p.x >= box.x &&
+    p.x <= box.x + box.width &&
+    p.y >= box.y &&
+    p.y <= box.y + box.height
+  );
+}
+
+// ─── Arrow Path + Collision Detection ─────────────────────────────────────────
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
-  const dx     = Math.abs(x2 - x1);
-  const dy     = Math.abs(y2 - y1);
   const offset = 60 + arrowIndex * 30;
-  const mx     = (x1 + x2) / 2;
-  const my     = (y1 + y2) / 2;
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
 
-  let cx, cy;
+  const cx = mx - offset;
+  const cy = my;
 
-  if (dx < dy * 0.5) {
-    cx = mx - offset;
-    cy = my;
-  } else if (dx >= dy) {
-    cx = mx;
-    cy = Math.min(y1, y2) - offset;
-  } else {
-    cx = Math.max(x1, x2) + offset;
-    cy = my;
+  // 🔥 Collision Detection
+  let collided = false;
+
+  for (let t = 0; t <= 1; t += 0.05) {
+    const p = sampleQuadratic(x1, y1, cx, cy, x2, y2, t);
+    for (const box of LABEL_BOXES) {
+      if (pointInBox(p, box)) {
+        collided = true;
+        break;
+      }
+    }
+    if (collided) break;
+  }
+
+  if (collided) {
+    console.log("⚠️ Collision detected on arrow");
   }
 
   return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
@@ -240,7 +237,7 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
 // ─── Main Render ──────────────────────────────────────────────────────────────
 function render(ast, horizontal) {
 
-  LABEL_BOXES = []; // reset
+  LABEL_BOXES = [];
 
   const laneMap           = buildLaneMap(ast);
   const positions         = computePositions(ast, horizontal, laneMap);
@@ -261,13 +258,13 @@ function render(ast, horizontal) {
       const arrow = step.arrows[ai];
 
       const fromRef = parseArrowRef(arrow.from ?? '');
-      const toRef   = parseArrowRef(arrow.to   ?? '');
+      const toRef   = parseArrowRef(arrow.to ?? '');
 
       const fromMol = resolveMol(fromRef.alias, step);
-      const toMol   = resolveMol(toRef.alias,   step);
+      const toMol   = resolveMol(toRef.alias, step);
 
       const fromAtom = getAtomPos(fromMol, fromRef, 'from');
-      const toAtom   = getAtomPos(toMol,   toRef,   'to');
+      const toAtom   = getAtomPos(toMol, toRef, 'to');
 
       const p1 = stepPos[fromRef.alias];
       const p2 = stepPos[toRef.alias];
