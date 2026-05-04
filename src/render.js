@@ -53,9 +53,11 @@ function getAtomPos(mol, ref, role = 'to') {
   if (ref.atomB && mol.atoms[ref.atomLabel] && mol.atoms[ref.atomB]) {
     const a = mol.atoms[ref.atomLabel];
     const b = mol.atoms[ref.atomB];
+
     if (role === 'from') {
       return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     }
+
     return a;
   }
 
@@ -69,11 +71,13 @@ function getAtomPos(mol, ref, role = 'to') {
 function buildLaneMap(ast) {
   const map = new Map();
   let i = 0;
+
   for (const step of ast.steps) {
     for (const mol of Object.values(step.species)) {
       if (!map.has(mol)) map.set(mol, i++);
     }
   }
+
   return map;
 }
 
@@ -94,12 +98,14 @@ function computePositions(ast, horizontal, laneMap) {
 
 function computeCanvas(positions) {
   let maxX = 0, maxY = 0;
+
   for (const step of positions) {
     for (const p of Object.values(step)) {
       if (p.x > maxX) maxX = p.x;
       if (p.y > maxY) maxY = p.y;
     }
   }
+
   return { width: maxX + PADDING * 2, height: maxY + PADDING * 2 };
 }
 
@@ -107,26 +113,45 @@ function renderMolecule(alias, step, ox, oy) {
   const mol = moleculeRegistry[step.species[alias]];
   let svg = '';
 
+  // Bonds
   for (const bond of mol.bonds || []) {
     const [a, b] = bond;
-    const A = mol.atoms[a], B = mol.atoms[b];
+    const A = mol.atoms[a];
+    const B = mol.atoms[b];
+
     svg += `<line x1="${ox + A.x}" y1="${oy + A.y}" x2="${ox + B.x}" y2="${oy + B.y}" stroke="black"/>`;
   }
 
+  // Labels + bounding boxes
   for (const [k, pos] of Object.entries(mol.atoms)) {
-    const lx = ox + pos.x, ly = oy + pos.y;
-    const w = 14;
+    const lx = ox + pos.x;
+    const ly = oy + pos.y;
+    const w  = 14;
 
-    const box = { x: lx - w/2, y: ly - 9, width: w, height: 18 };
+    const box = {
+      x: lx - w / 2,
+      y: ly - 9,
+      width: w,
+      height: 18
+    };
+
     LABEL_BOXES.push(box);
 
     svg += `<rect x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" fill="white"/>`;
     svg += `<text x="${lx}" y="${ly}" text-anchor="middle">${k}</text>`;
   }
 
-  if (mol.charge) {
+  // Charge
+  if (mol.charge && mol.charge !== 0) {
     const p = Object.values(mol.atoms)[0];
-    svg += `<text x="${ox + p.x + 10}" y="${oy + p.y - 12}">${mol.charge === -1 ? '−' : '+'}</text>`;
+
+    const chargeLabel =
+      mol.charge === 1  ? '+' :
+      mol.charge === -1 ? '−' :
+      mol.charge > 0    ? `${mol.charge}+` :
+                          `${Math.abs(mol.charge)}−`;
+
+    svg += `<text x="${ox + p.x + 10}" y="${oy + p.y - 12}">${chargeLabel}</text>`;
   }
 
   return svg;
@@ -169,26 +194,16 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
     ? [-base, -(base + 30), -(base + 60), base, base + 30, base + 60]
     : [base, base + 30, base + 60, -base, -(base + 30), -(base + 60)];
 
-  console.log("---- ARROW DEBUG ----");
-  console.log("from:", x1, y1, "to:", x2, y2);
-  console.log("goingDown:", goingDown);
-  console.log("attempts:", attempts);
-
   for (const offset of attempts) {
     const cx = mx + offset;
     const cy = my;
-    const hit = collides(x1, y1, cx, cy, x2, y2);
 
-    console.log("try offset:", offset, "collision:", hit);
-
-    if (!hit) {
-      console.log("chosen offset:", offset);
+    if (!collides(x1, y1, cx, cy, x2, y2)) {
       return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
     }
   }
 
   const fallback = goingDown ? -base - 90 : base + 90;
-  console.log("fallback used:", fallback);
 
   return `M ${x1} ${y1} Q ${mx + fallback} ${my} ${x2} ${y2}`;
 }
@@ -197,7 +212,7 @@ function render(ast, horizontal) {
   LABEL_BOXES = [];
 
   const laneMap = buildLaneMap(ast);
-  const pos = computePositions(ast, horizontal, laneMap);
+  const pos     = computePositions(ast, horizontal, laneMap);
   const { width, height } = computeCanvas(pos);
 
   let body = '';
@@ -218,7 +233,14 @@ function render(ast, horizontal) {
       const a1 = getAtomPos(resolveMol(f.alias, step), f, 'from');
       const a2 = getAtomPos(resolveMol(t.alias, step), t, 'to');
 
-      const d = arrowPath(p1.x + a1.x, p1.y + a1.y, p2.x + a2.x, p2.y + a2.y, ai);
+      const d = arrowPath(
+        p1.x + a1.x,
+        p1.y + a1.y,
+        p2.x + a2.x,
+        p2.y + a2.y,
+        ai
+      );
+
       body += `<path d="${d}" stroke="black" fill="none"/>`;
     });
   });
