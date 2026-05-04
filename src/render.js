@@ -3,18 +3,18 @@ import path from 'path';
 import { parseMechlang } from './parse.js';
 import { moleculeRegistry } from './molecules.js';
 
-const STEP_Y_GAP     = 240;
-const STEP_X_GAP     = 260;
+const STEP_Y_GAP = 240;
+const STEP_X_GAP = 260;
 const MOLECULE_X_GAP = 180;
 const MOLECULE_Y_GAP = 100;
-const STEP_Y_ORIGIN  = 140;
-const STEP_X_ORIGIN  = 120;
-const PADDING        = 80;
+const STEP_Y_ORIGIN = 140;
+const STEP_X_ORIGIN = 120;
+const PADDING = 80;
 
 let LABEL_BOXES = [];
 
-const args             = process.argv.slice(2);
-const mechFile         = args.find(a => !a.startsWith('--'));
+const args = process.argv.slice(2);
+const mechFile = args.find(a => !a.startsWith('--'));
 const layoutHorizontal = args.includes('--layout=horizontal');
 
 if (!mechFile) {
@@ -23,7 +23,7 @@ if (!mechFile) {
 }
 
 const source = readFileSync(mechFile, 'utf8');
-const ast    = parseMechlang(source);
+const ast = parseMechlang(source);
 
 function resolveMol(alias, step) {
   const molKey = step.species[alias];
@@ -32,13 +32,17 @@ function resolveMol(alias, step) {
 
 function parseArrowRef(ref) {
   const dotIndex = ref.indexOf('.');
-  if (dotIndex === -1) return { alias: ref, atomLabel: null, atomB: null };
+  if (dotIndex === -1) {
+    return { alias: ref, atomLabel: null, atomB: null };
+  }
 
   const alias = ref.slice(0, dotIndex);
   const atomPart = ref.slice(dotIndex + 1);
   const dashIdx = atomPart.indexOf('-');
 
-  if (dashIdx === -1) return { alias, atomLabel: atomPart, atomB: null };
+  if (dashIdx === -1) {
+    return { alias, atomLabel: atomPart, atomB: null };
+  }
 
   return {
     alias,
@@ -65,7 +69,7 @@ function getAtomPos(mol, ref, role = 'to') {
     return mol.atoms[ref.atomLabel];
   }
 
-  return Object.values(mol.atoms)[0];
+  return Object.values(mol.atoms)[0] ?? { x: 0, y: 0 };
 }
 
 function buildLaneMap(ast) {
@@ -73,23 +77,50 @@ function buildLaneMap(ast) {
   let i = 0;
 
   for (const step of ast.steps) {
-    for (const mol of Object.values(step.species)) {
-      if (!map.has(mol)) map.set(mol, i++);
+    for (const molKey of Object.values(step.species)) {
+      if (!map.has(molKey)) {
+        map.set(molKey, i++);
+      }
     }
   }
 
   return map;
 }
 
+function getOrderedAliases(step, laneMap) {
+  const aliases = Object.keys(step.species);
+  const persistSet = new Set(step.persist || []);
+
+  const persistent = aliases
+    .filter(alias => persistSet.has(alias))
+    .sort((a, b) => {
+      const laneA = laneMap.get(step.species[a]) ?? 0;
+      const laneB = laneMap.get(step.species[b]) ?? 0;
+      return laneA - laneB;
+    });
+
+  const novel = aliases.filter(alias => !persistSet.has(alias));
+
+  return [...persistent, ...novel];
+}
+
 function computePositions(ast, horizontal, laneMap) {
   return ast.steps.map((step, si) => {
     const stepPos = {};
-    const aliases = Object.keys(step.species);
+    const aliases = getOrderedAliases(step, laneMap);
 
-    aliases.forEach((alias, i) => {
-      stepPos[alias] = horizontal
-        ? { x: STEP_X_ORIGIN + si * STEP_X_GAP, y: STEP_Y_ORIGIN + i * MOLECULE_Y_GAP }
-        : { x: STEP_X_ORIGIN + i * MOLECULE_X_GAP, y: STEP_Y_ORIGIN + si * STEP_Y_GAP };
+    aliases.forEach((alias, localIndex) => {
+      if (horizontal) {
+        stepPos[alias] = {
+          x: STEP_X_ORIGIN + si * STEP_X_GAP,
+          y: STEP_Y_ORIGIN + localIndex * MOLECULE_Y_GAP
+        };
+      } else {
+        stepPos[alias] = {
+          x: STEP_X_ORIGIN + localIndex * MOLECULE_X_GAP,
+          y: STEP_Y_ORIGIN + si * STEP_Y_GAP
+        };
+      }
     });
 
     return stepPos;
@@ -97,36 +128,51 @@ function computePositions(ast, horizontal, laneMap) {
 }
 
 function computeCanvas(positions) {
-  let maxX = 0, maxY = 0;
+  let maxX = 0;
+  let maxY = 0;
 
-  for (const step of positions) {
-    for (const p of Object.values(step)) {
-      if (p.x > maxX) maxX = p.x;
-      if (p.y > maxY) maxY = p.y;
+  for (const stepPos of positions) {
+    for (const { x, y } of Object.values(stepPos)) {
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
     }
   }
 
-  return { width: maxX + PADDING * 2, height: maxY + PADDING * 2 };
+  return {
+    width: maxX + PADDING * 2,
+    height: maxY + PADDING * 2
+  };
 }
 
 function renderMolecule(alias, step, ox, oy) {
-  const mol = moleculeRegistry[step.species[alias]];
-  let svg = '';
+  const molKey = step.species[alias];
+  const mol = molKey ? moleculeRegistry[molKey] : null;
 
-  // Bonds
-  for (const bond of mol.bonds || []) {
-    const [a, b] = bond;
-    const A = mol.atoms[a];
-    const B = mol.atoms[b];
-
-    svg += `<line x1="${ox + A.x}" y1="${oy + A.y}" x2="${ox + B.x}" y2="${oy + B.y}" stroke="black"/>`;
+  if (!mol) {
+    return `<text x="${ox}" y="${oy}" font-family="sans-serif" font-size="13" fill="red">[${alias}?]</text>`;
   }
 
-  // Labels + bounding boxes
-  for (const [k, pos] of Object.entries(mol.atoms)) {
+  let svg = '';
+
+  for (const bond of (mol.bonds || [])) {
+    const [aKey, bKey] = bond;
+    const a1 = mol.atoms[aKey];
+    const a2 = mol.atoms[bKey];
+    if (!a1 || !a2) continue;
+
+    const x1 = ox + a1.x;
+    const y1 = oy + a1.y;
+    const x2 = ox + a2.x;
+    const y2 = oy + a2.y;
+
+    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="black" stroke-width="1.5"/>`;
+  }
+
+  for (const [key, pos] of Object.entries(mol.atoms)) {
+    const label = key;
     const lx = ox + pos.x;
     const ly = oy + pos.y;
-    const w  = 14;
+    const w = label.length > 1 ? label.length * 9 : 14;
 
     const box = {
       x: lx - w / 2,
@@ -138,20 +184,19 @@ function renderMolecule(alias, step, ox, oy) {
     LABEL_BOXES.push(box);
 
     svg += `<rect x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" fill="white"/>`;
-    svg += `<text x="${lx}" y="${ly}" text-anchor="middle">${k}</text>`;
+    svg += `<text x="${lx}" y="${ly}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
   }
 
-  // Charge
   if (mol.charge && mol.charge !== 0) {
-    const p = Object.values(mol.atoms)[0];
+    const firstPos = Object.values(mol.atoms)[0];
 
     const chargeLabel =
-      mol.charge === 1  ? '+' :
+      mol.charge === 1 ? '+' :
       mol.charge === -1 ? '−' :
-      mol.charge > 0    ? `${mol.charge}+` :
-                          `${Math.abs(mol.charge)}−`;
+      mol.charge > 0 ? `${mol.charge}+` :
+      `${Math.abs(mol.charge)}−`;
 
-    svg += `<text x="${ox + p.x + 10}" y="${oy + p.y - 12}">${chargeLabel}</text>`;
+    svg += `<text x="${ox + firstPos.x + 10}" y="${oy + firstPos.y - 12}" font-family="sans-serif" font-size="11">${chargeLabel}</text>`;
   }
 
   return svg;
@@ -159,8 +204,8 @@ function renderMolecule(alias, step, ox, oy) {
 
 function sampleQuadratic(x1, y1, cx, cy, x2, y2, t) {
   return {
-    x: (1 - t)**2 * x1 + 2*(1 - t)*t * cx + t**2 * x2,
-    y: (1 - t)**2 * y1 + 2*(1 - t)*t * cy + t**2 * y2
+    x: (1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2,
+    y: (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2
   };
 }
 
@@ -204,7 +249,6 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   }
 
   const fallback = goingDown ? -base - 90 : base + 90;
-
   return `M ${x1} ${y1} Q ${mx + fallback} ${my} ${x2} ${y2}`;
 }
 
@@ -212,23 +256,26 @@ function render(ast, horizontal) {
   LABEL_BOXES = [];
 
   const laneMap = buildLaneMap(ast);
-  const pos     = computePositions(ast, horizontal, laneMap);
+  const pos = computePositions(ast, horizontal, laneMap);
   const { width, height } = computeCanvas(pos);
 
   let body = '';
 
   ast.steps.forEach((step, si) => {
-    for (const alias of Object.keys(step.species)) {
+    const aliases = getOrderedAliases(step, laneMap);
+
+    for (const alias of aliases) {
       const p = pos[si][alias];
       body += renderMolecule(alias, step, p.x, p.y);
     }
 
     step.arrows.forEach((arrow, ai) => {
-      const f = parseArrowRef(arrow.from);
-      const t = parseArrowRef(arrow.to);
+      const f = parseArrowRef(arrow.from ?? '');
+      const t = parseArrowRef(arrow.to ?? '');
 
       const p1 = pos[si][f.alias];
       const p2 = pos[si][t.alias];
+      if (!p1 || !p2) return;
 
       const a1 = getAtomPos(resolveMol(f.alias, step), f, 'from');
       const a2 = getAtomPos(resolveMol(t.alias, step), t, 'to');
@@ -241,7 +288,7 @@ function render(ast, horizontal) {
         ai
       );
 
-      body += `<path d="${d}" stroke="black" fill="none"/>`;
+      body += `<path d="${d}" stroke="black" fill="none" stroke-width="1.5"/>`;
     });
   });
 
