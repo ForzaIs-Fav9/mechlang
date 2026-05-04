@@ -140,14 +140,21 @@ function sampleQuadratic(x1, y1, cx, cy, x2, y2, t) {
 }
 
 function collides(x1, y1, cx, cy, x2, y2) {
-  for (let t = 0; t <= 1; t += 0.05) {
+  for (let t = 0.08; t <= 0.92; t += 0.05) {
     const p = sampleQuadratic(x1, y1, cx, cy, x2, y2, t);
+
     for (const b of LABEL_BOXES) {
-      if (p.x >= b.x && p.x <= b.x + b.width && p.y >= b.y && p.y <= b.y + b.height) {
+      if (
+        p.x >= b.x &&
+        p.x <= b.x + b.width &&
+        p.y >= b.y &&
+        p.y <= b.y + b.height
+      ) {
         return true;
       }
     }
   }
+
   return false;
 }
 
@@ -156,12 +163,11 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const my = (y1 + y2) / 2;
 
   const goingDown = y2 > y1;
-
   const base = 40 + arrowIndex * 20;
 
   const attempts = goingDown
-    ? [-base, -(base + 30), -(base + 60)]
-    : [ base,  (base + 30),  (base + 60)];
+    ? [-base, -(base + 30), -(base + 60), base, base + 30, base + 60]
+    : [base, base + 30, base + 60, -base, -(base + 30), -(base + 60)];
 
   console.log("---- ARROW DEBUG ----");
   console.log("from:", x1, y1, "to:", x2, y2);
@@ -171,7 +177,6 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   for (const offset of attempts) {
     const cx = mx + offset;
     const cy = my;
-
     const hit = collides(x1, y1, cx, cy, x2, y2);
 
     console.log("try offset:", offset, "collision:", hit);
@@ -183,7 +188,6 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   }
 
   const fallback = goingDown ? -base - 90 : base + 90;
-
   console.log("fallback used:", fallback);
 
   return `M ${x1} ${y1} Q ${mx + fallback} ${my} ${x2} ${y2}`;
