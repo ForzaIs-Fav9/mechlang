@@ -285,8 +285,6 @@ function collides(x1, y1, cx, cy, x2, y2) {
 }
 
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
-  const mx = (x1 + x2) / 2;
-  const my = (y1 + y2) / 2;
 
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -294,24 +292,36 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const mostlyVertical =
     Math.abs(dy) > Math.abs(dx);
 
-  const base = 28 + arrowIndex * 8;
+  const base = 24 + arrowIndex * 6;
 
   const attempts = [
     base,
-    base + 12,
-    base + 24,
-    base + 36
+    base + 10,
+    base + 20
   ];
 
   for (const mag of attempts) {
-    let cx = mx;
-    let cy = my;
+
+    let cx;
+    let cy;
 
     if (mostlyVertical) {
+
+      // Anchor near source atom
+      cx = x1 + (dx * 0.35);
+      cy = y1 + (dy * 0.5);
+
       const side = dx >= 0 ? 1 : -1;
+
       cx += side * mag;
+
     } else {
+
+      cx = x1 + (dx * 0.5);
+      cy = y1 + (dy * 0.35);
+
       const side = dy >= 0 ? 1 : -1;
+
       cy += side * mag;
     }
 
@@ -320,11 +330,13 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
     }
   }
 
+  // fallback
   if (mostlyVertical) {
-    return `M ${x1} ${y1} Q ${mx + base} ${my} ${x2} ${y2}`;
+
+    return `M ${x1} ${y1} Q ${x1 + dx * 0.35 + base} ${y1 + dy * 0.5} ${x2} ${y2}`;
   }
 
-  return `M ${x1} ${y1} Q ${mx} ${my + base} ${x2} ${y2}`;
+  return `M ${x1} ${y1} Q ${x1 + dx * 0.5} ${y1 + dy * 0.35 + base} ${x2} ${y2}`;
 }
 
 function render(ast, horizontal) {
