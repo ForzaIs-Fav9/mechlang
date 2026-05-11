@@ -172,6 +172,7 @@ function renderMolecule(alias, step, ox, oy) {
 
   let svg = '';
 
+  // Bonds
   for (const bond of (mol.bonds || [])) {
     const [aKey, bKey, order = 1] = bond;
 
@@ -193,23 +194,49 @@ function renderMolecule(alias, step, ox, oy) {
       const nx = (-dy / len) * 3;
       const ny = (dx / len) * 3;
 
-      svg += `<line x1="${x1 + nx}" y1="${y1 + ny}" x2="${x2 + nx}" y2="${y2 + ny}" stroke="black" stroke-width="1.5"/>`;
+      svg += `<line
+        x1="${x1 + nx}"
+        y1="${y1 + ny}"
+        x2="${x2 + nx}"
+        y2="${y2 + ny}"
+        stroke="black"
+        stroke-width="1.5"
+      />`;
 
-      svg += `<line x1="${x1 - nx}" y1="${y1 - ny}" x2="${x2 - nx}" y2="${y2 - ny}" stroke="black" stroke-width="1.5"/>`;
+      svg += `<line
+        x1="${x1 - nx}"
+        y1="${y1 - ny}"
+        x2="${x2 - nx}"
+        y2="${y2 - ny}"
+        stroke="black"
+        stroke-width="1.5"
+      />`;
+
     } else {
-      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="black" stroke-width="1.5"/>`;
+
+      svg += `<line
+        x1="${x1}"
+        y1="${y1}"
+        x2="${x2}"
+        y2="${y2}"
+        stroke="black"
+        stroke-width="1.5"
+      />`;
     }
   }
 
+  // Atom labels
   for (const [key, pos] of Object.entries(mol.atoms)) {
+
     const label = mol.labels?.[key] ?? key;
 
     const lx = ox + pos.x;
     const ly = oy + pos.y;
 
-    const w = label.length > 1
-      ? label.length * 9
-      : 14;
+    const w =
+      label.length > 1
+        ? label.length * 9
+        : 14;
 
     const box = {
       x: lx - w / 2,
@@ -220,12 +247,27 @@ function renderMolecule(alias, step, ox, oy) {
 
     LABEL_BOXES.push(box);
 
-    svg += `<rect x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" fill="white"/>`;
+    svg += `<rect
+      x="${box.x}"
+      y="${box.y}"
+      width="${box.width}"
+      height="${box.height}"
+      fill="white"
+    />`;
 
-    svg += `<text x="${lx}" y="${ly}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
+    svg += `<text
+      x="${lx}"
+      y="${ly}"
+      font-family="sans-serif"
+      font-size="14"
+      text-anchor="middle"
+      dominant-baseline="middle"
+    >${label}</text>`;
   }
 
+  // Charges
   if (mol.charge && mol.charge !== 0) {
+
     const firstPos = Object.values(mol.atoms)[0];
 
     const chargeLabel =
@@ -237,7 +279,12 @@ function renderMolecule(alias, step, ox, oy) {
             ? `${mol.charge}+`
             : `${Math.abs(mol.charge)}−`;
 
-    svg += `<text x="${ox + firstPos.x + 10}" y="${oy + firstPos.y - 12}" font-family="sans-serif" font-size="11">${chargeLabel}</text>`;
+    svg += `<text
+      x="${ox + firstPos.x + 10}"
+      y="${oy + firstPos.y - 12}"
+      font-family="sans-serif"
+      font-size="11"
+    >${chargeLabel}</text>`;
   }
 
   return svg;
@@ -258,7 +305,9 @@ function sampleQuadratic(x1, y1, cx, cy, x2, y2, t) {
 }
 
 function collides(x1, y1, cx, cy, x2, y2) {
+
   for (let t = 0.08; t <= 0.92; t += 0.05) {
+
     const p = sampleQuadratic(
       x1,
       y1,
@@ -270,6 +319,7 @@ function collides(x1, y1, cx, cy, x2, y2) {
     );
 
     for (const b of LABEL_BOXES) {
+
       if (
         p.x >= b.x &&
         p.x <= b.x + b.width &&
@@ -307,7 +357,6 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
 
     if (mostlyVertical) {
 
-      // Anchor near source atom
       cx = x1 + (dx * 0.35);
       cy = y1 + (dy * 0.5);
 
@@ -326,20 +375,29 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
     }
 
     if (!collides(x1, y1, cx, cy, x2, y2)) {
+
       return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
     }
   }
 
-  // fallback
   if (mostlyVertical) {
 
-    return `M ${x1} ${y1} Q ${x1 + dx * 0.35 + base} ${y1 + dy * 0.5} ${x2} ${y2}`;
+    return `M ${x1} ${y1} Q ${
+      x1 + dx * 0.35 + base
+    } ${
+      y1 + dy * 0.5
+    } ${x2} ${y2}`;
   }
 
-  return `M ${x1} ${y1} Q ${x1 + dx * 0.5} ${y1 + dy * 0.35 + base} ${x2} ${y2}`;
+  return `M ${x1} ${y1} Q ${
+    x1 + dx * 0.5
+  } ${
+    y1 + dy * 0.35 + base
+  } ${x2} ${y2}`;
 }
 
 function render(ast, horizontal) {
+
   LABEL_BOXES = [];
 
   const laneMap = buildLaneMap(ast);
@@ -353,16 +411,31 @@ function render(ast, horizontal) {
   const { width, height } =
     computeCanvas(positions);
 
-  let body = '';
+  let body = `
+<defs>
+  <marker
+    id="arrowhead"
+    markerWidth="10"
+    markerHeight="7"
+    refX="9"
+    refY="3.5"
+    orient="auto"
+    markerUnits="strokeWidth">
+
+    <polygon
+      points="0 0, 10 3.5, 0 7"
+      fill="black"/>
+  </marker>
+</defs>
+`;
 
   ast.steps.forEach((step, si) => {
-    console.log("STEP", si);
-    console.log("species:", step.species);
-    console.log("arrows:", step.arrows);
+
     const aliases =
       getOrderedAliases(step, laneMap);
 
     for (const alias of aliases) {
+
       const p = positions[si][alias];
 
       body += renderMolecule(
@@ -374,14 +447,18 @@ function render(ast, horizontal) {
     }
 
     step.arrows.forEach((arrow, ai) => {
+
       const fromRef =
         parseArrowRef(arrow.from ?? '');
 
       const toRef =
         parseArrowRef(arrow.to ?? '');
 
-      const p1 = positions[si][fromRef.alias];
-      const p2 = positions[si][toRef.alias];
+      const p1 =
+        positions[si][fromRef.alias];
+
+      const p2 =
+        positions[si][toRef.alias];
 
       if (!p1 || !p2) return;
 
@@ -405,11 +482,24 @@ function render(ast, horizontal) {
         ai
       );
 
-      body += `<path d="${d}" stroke="black" fill="none" stroke-width="1.5"/>`;
+      body += `<path
+        d="${d}"
+        stroke="black"
+        fill="none"
+        stroke-width="1.5"
+        marker-end="url(#arrowhead)"
+      />`;
     });
   });
 
-  return `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+  return `
+<svg
+  viewBox="0 0 ${width} ${height}"
+  xmlns="http://www.w3.org/2000/svg"
+>
+${body}
+</svg>
+`;
 }
 
 const svg = render(ast, layoutHorizontal);
