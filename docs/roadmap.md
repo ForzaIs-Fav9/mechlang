@@ -84,7 +84,7 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 
 ---
 
-## Phase 4 — Renderer Intelligence (Active)
+## Phase 4 — Renderer Intelligence (v0.13-v0.15)
 
 ### R.1 — Species Persistence ✅ (v0.12)
 - `persist: alias1, alias2` syntax in `.mech` files
@@ -97,15 +97,25 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 - Per-step local re-indexing: persistent first, novel packed after
 - No molecule overlap in multi-step diagrams
 
-### R.3 — Resonance Arrow (v0.13)
-- Dedicated double-headed arrow type (`<->`)
+### R.3 — Curved Arrow Rendering ✅ (v0.13)
+- Quadratic Bézier mechanism arrows
+- SVG arrowheads via `marker-end`
+- Collision-aware curved-arrow routing
+- Endpoint offsetting to avoid atom-label overlap
+- Deterministic AST-driven arrow direction
+- Stable rendering in vertical and horizontal layouts
+
+### R.4 — Resonance Arrow (v0.14)
+- Dedicated double-headed arrow type (`⟷`)
 - Distinct from mechanism arrows
-- New arrow type in parser + renderer
+- Parser + renderer support
+- Resonance-specific layout behavior
 
-### R.4 — Arrow Collision Detection (v0.15)
-- Detect and resolve overlapping curved arrows
-- Deferred until layout engine is stable
-
+### R.5 — Advanced Collision Resolution (v0.15)
+- Dense multi-arrow routing
+- Automatic curve balancing
+- Shared-region arrow avoidance
+- Canonical textbook-style spacing
 ---
 
 ## Phase 5 — Hardening (v0.14)
