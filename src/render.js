@@ -669,11 +669,18 @@ const svg =
     layoutHorizontal
   );
 
+const baseName = path.basename(
+  mechFile,
+  '.mech'
+);
+
+const suffix =
+  layoutHorizontal
+    ? '.horizontal.svg'
+    : '.svg';
+
 const out =
-  `out/${path.basename(
-    mechFile,
-    '.mech'
-  )}.svg`;
+  `out/${baseName}${suffix}`;
 
 mkdirSync(
   'out',
