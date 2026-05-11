@@ -334,6 +334,19 @@ function collides(x1, y1, cx, cy, x2, y2) {
   return false;
 }
 
+function offsetEndpoint(x1, y1, x2, y2, distance = 10) {
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+
+  return {
+    x: x2 - (dx / len) * distance,
+    y: y2 - (dy / len) * distance
+  };
+}
+
 function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
 
   const dx = x2 - x1;
@@ -474,13 +487,27 @@ function render(ast, horizontal) {
         'to'
       );
 
-      const d = arrowPath(
-        p1.x + a1.x,
-        p1.y + a1.y,
-        p2.x + a2.x,
-        p2.y + a2.y,
-        ai
+      const startX = p1.x + a1.x;
+      const startY = p1.y + a1.y;
+
+      const rawEndX = p2.x + a2.x;
+      const rawEndY = p2.y + a2.y;
+
+      const adjustedEnd = offsetEndpoint(
+        startX,
+        startY,
+        rawEndX,
+        rawEndY,
+        10
       );
+
+const d = arrowPath(
+  startX,
+  startY,
+  adjustedEnd.x,
+  adjustedEnd.y,
+  ai
+);
 
       body += `<path
         d="${d}"
