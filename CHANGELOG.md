@@ -4,6 +4,137 @@ All notable changes to MechLang are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+# Changelog
+
+All notable changes to MechLang will be documented in this file.
+
+---
+
+# v0.13.0 — Curved Arrow Rendering
+
+Released: 2026-05-11  
+Codename: Electron Flow
+
+---
+
+## Added
+
+### Curved Mechanism Arrows
+- Quadratic Bézier curved-arrow rendering
+- Dynamic curvature selection based on dominant reaction axis
+- Stable curved-arrow routing across vertical and horizontal layouts
+
+### SVG Arrowheads
+- SVG marker-based arrowheads via `marker-end`
+- Endpoint offsetting to reduce overlap with atom labels
+- Improved visual readability for electron flow direction
+
+### Collision-Aware Arrow Routing
+- Curved-arrow collision detection against atom-label bounding boxes
+- Multiple routing attempts before fallback geometry
+- Reduced label overlap in dense mechanisms
+
+### Horizontal Output Separation
+- `--layout=horizontal` now outputs:
+  ```text
+  out/<filename>.horizontal.svg
+  ```
+- Vertical and horizontal renders can coexist without overwrite
+
+### Renderer Stabilization
+- Deterministic curved-arrow geometry system
+- Stable arrow routing independent of rendering order
+- Consistent AST-driven arrow direction contract
+
+---
+
+## Improved
+
+### Double Bond Rendering
+- Stable rendering for:
+  - `C=C`
+  - `C=O`
+- Preserved during curved-arrow integration
+- Alias-label compatibility maintained (`Ca`, `Cb` → `C`)
+
+### Multi-Step Mechanisms
+- Cleaner persistent-species layout behavior
+- Improved horizontal step rendering
+- Compact lane packing
+
+### Atom Labels
+- Reduced overlap with curved arrows
+- Cleaner SVG readability
+
+---
+
+## Fixed
+
+### Arrow Direction Instability
+Curvature changes no longer flip arrow meaning or direction.
+
+### S-Curve Arrow Regressions
+Shared-endpoint artifacts removed from consecutive arrows.
+
+### Double Bond Regression
+Restored stable bond-order rendering after renderer rewrite.
+
+### Label Rendering Regressions
+Aliased atom labels now render consistently across examples.
+
+### Horizontal Render Overwrite
+Horizontal layout output no longer overwrites vertical SVG renders.
+
+---
+
+## Design Decisions
+
+- Arrow direction remains fully semantic and AST-driven
+- Geometry may affect curvature, but never chemical meaning
+- Species persistence remains parser-scoped
+- Renderer receives fully resolved step-local species maps only
+
+---
+
+## Verified Examples
+
+- `sn2.mech`
+- `sn2_steps.mech`
+- `sn1_steps.mech`
+- `sn2_alt.mech`
+- `double_bond_test.mech`
+- `persistence_test.mech`
+
+Verified in:
+- vertical layout
+- horizontal layout
+
+---
+
+## Compatibility
+
+All v0.12 `.mech` files remain compatible.
+
+No DSL syntax changes required.
+
+---
+
+## What's Next — v0.14
+
+### Resonance Arrows
+Dedicated resonance-arrow rendering (`⟷`) independent from mechanism arrows.
+
+### Renderer Hardening
+- snapshot testing
+- SVG regression testing
+- denser collision handling
+- layout refinement
+
+### Mechanism Expansion
+- E2 elimination
+- carbonyl addition
+- resonance delocalization
+- stereochemistry foundations
 
 ## [0.12.0] — 2026-03-21
 
