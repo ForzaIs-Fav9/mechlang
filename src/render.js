@@ -415,15 +415,15 @@ function render(ast, horizontal) {
 <defs>
   <marker
     id="arrowhead"
-    markerWidth="10"
-    markerHeight="7"
-    refX="9"
-    refY="3.5"
+    markerWidth="7"
+    markerHeight="5"
+    refX="6"
+    refY="2.5"
     orient="auto"
     markerUnits="strokeWidth">
 
     <polygon
-      points="0 0, 10 3.5, 0 7"
+      points="0 0, 7 2.5, 0 5"
       fill="black"/>
   </marker>
 </defs>
@@ -486,7 +486,7 @@ function render(ast, horizontal) {
         d="${d}"
         stroke="black"
         fill="none"
-        stroke-width="1.5"
+        stroke-width="1.2"
         marker-end="url(#arrowhead)"
       />`;
     });
