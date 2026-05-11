@@ -32,14 +32,25 @@ function resolveMol(alias, step) {
 
 function parseArrowRef(ref) {
   const dotIndex = ref.indexOf('.');
-  if (dotIndex === -1) return { alias: ref, atomLabel: null, atomB: null };
+
+  if (dotIndex === -1) {
+    return {
+      alias: ref,
+      atomLabel: null,
+      atomB: null
+    };
+  }
 
   const alias = ref.slice(0, dotIndex);
   const atomPart = ref.slice(dotIndex + 1);
   const dashIdx = atomPart.indexOf('-');
 
   if (dashIdx === -1) {
-    return { alias, atomLabel: atomPart, atomB: null };
+    return {
+      alias,
+      atomLabel: atomPart,
+      atomB: null
+    };
   }
 
   return {
@@ -50,14 +61,23 @@ function parseArrowRef(ref) {
 }
 
 function getAtomPos(mol, ref, role = 'to') {
-  if (!mol) return { x: 0, y: 0 };
+  if (!mol) {
+    return { x: 0, y: 0 };
+  }
 
-  if (ref.atomB && mol.atoms[ref.atomLabel] && mol.atoms[ref.atomB]) {
+  if (
+    ref.atomB &&
+    mol.atoms[ref.atomLabel] &&
+    mol.atoms[ref.atomB]
+  ) {
     const a = mol.atoms[ref.atomLabel];
     const b = mol.atoms[ref.atomB];
 
     if (role === 'from') {
-      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      return {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2
+      };
     }
 
     return a;
@@ -154,8 +174,10 @@ function renderMolecule(alias, step, ox, oy) {
 
   for (const bond of (mol.bonds || [])) {
     const [aKey, bKey, order = 1] = bond;
+
     const a1 = mol.atoms[aKey];
     const a2 = mol.atoms[bKey];
+
     if (!a1 || !a2) continue;
 
     const x1 = ox + a1.x;
@@ -172,6 +194,7 @@ function renderMolecule(alias, step, ox, oy) {
       const ny = (dx / len) * 3;
 
       svg += `<line x1="${x1 + nx}" y1="${y1 + ny}" x2="${x2 + nx}" y2="${y2 + ny}" stroke="black" stroke-width="1.5"/>`;
+
       svg += `<line x1="${x1 - nx}" y1="${y1 - ny}" x2="${x2 - nx}" y2="${y2 - ny}" stroke="black" stroke-width="1.5"/>`;
     } else {
       svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="black" stroke-width="1.5"/>`;
@@ -179,10 +202,14 @@ function renderMolecule(alias, step, ox, oy) {
   }
 
   for (const [key, pos] of Object.entries(mol.atoms)) {
-    const label = (mol.labels && mol.labels[key]) ? mol.labels[key] : key;
+    const label = mol.labels?.[key] ?? key;
+
     const lx = ox + pos.x;
     const ly = oy + pos.y;
-    const w = label.length > 1 ? label.length * 9 : 14;
+
+    const w = label.length > 1
+      ? label.length * 9
+      : 14;
 
     const box = {
       x: lx - w / 2,
@@ -194,6 +221,7 @@ function renderMolecule(alias, step, ox, oy) {
     LABEL_BOXES.push(box);
 
     svg += `<rect x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" fill="white"/>`;
+
     svg += `<text x="${lx}" y="${ly}" font-family="sans-serif" font-size="14" text-anchor="middle" dominant-baseline="middle">${label}</text>`;
   }
 
@@ -201,10 +229,13 @@ function renderMolecule(alias, step, ox, oy) {
     const firstPos = Object.values(mol.atoms)[0];
 
     const chargeLabel =
-      mol.charge === 1 ? '+' :
-      mol.charge === -1 ? '−' :
-      mol.charge > 0 ? `${mol.charge}+` :
-      `${Math.abs(mol.charge)}−`;
+      mol.charge === 1
+        ? '+'
+        : mol.charge === -1
+          ? '−'
+          : mol.charge > 0
+            ? `${mol.charge}+`
+            : `${Math.abs(mol.charge)}−`;
 
     svg += `<text x="${ox + firstPos.x + 10}" y="${oy + firstPos.y - 12}" font-family="sans-serif" font-size="11">${chargeLabel}</text>`;
   }
@@ -214,14 +245,29 @@ function renderMolecule(alias, step, ox, oy) {
 
 function sampleQuadratic(x1, y1, cx, cy, x2, y2, t) {
   return {
-    x: (1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t ** 2 * x2,
-    y: (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t ** 2 * y2
+    x:
+      (1 - t) ** 2 * x1 +
+      2 * (1 - t) * t * cx +
+      t ** 2 * x2,
+
+    y:
+      (1 - t) ** 2 * y1 +
+      2 * (1 - t) * t * cy +
+      t ** 2 * y2
   };
 }
 
 function collides(x1, y1, cx, cy, x2, y2) {
   for (let t = 0.08; t <= 0.92; t += 0.05) {
-    const p = sampleQuadratic(x1, y1, cx, cy, x2, y2, t);
+    const p = sampleQuadratic(
+      x1,
+      y1,
+      cx,
+      cy,
+      x2,
+      y2,
+      t
+    );
 
     for (const b of LABEL_BOXES) {
       if (
@@ -242,62 +288,99 @@ function arrowPath(x1, y1, x2, y2, arrowIndex = 0) {
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
 
-  const dx = Math.abs(x2 - x1);
-  const dy = Math.abs(y2 - y1);
+  const dx = x2 - x1;
+  const dy = y2 - y1;
 
-  const base = 28 + arrowIndex * 10;
-  const capped = Math.min(base, 48);
+  const mostlyVertical =
+    Math.abs(dy) > Math.abs(dx);
 
-  let offsets;
+  const base = 28 + arrowIndex * 8;
 
-  if (dx < dy * 0.75) {
-    offsets = [-capped, -(capped + 12), -(capped + 24), -(capped + 36)];
-  } else if (dy < dx * 0.75) {
-    offsets = [capped, capped + 12, capped + 24, capped + 36];
-  } else {
-    offsets = [-capped, -(capped + 12), -(capped + 24), -(capped + 36)];
-  }
+  const attempts = [
+    base,
+    base + 12,
+    base + 24,
+    base + 36
+  ];
 
-  for (const offset of offsets) {
-    const cx = mx + offset;
-    const cy = my;
+  for (const mag of attempts) {
+    let cx = mx;
+    let cy = my;
+
+    if (mostlyVertical) {
+      const side = dx >= 0 ? 1 : -1;
+      cx += side * mag;
+    } else {
+      const side = dy >= 0 ? 1 : -1;
+      cy += side * mag;
+    }
 
     if (!collides(x1, y1, cx, cy, x2, y2)) {
       return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
     }
   }
 
-  const fallback = offsets[0];
-  return `M ${x1} ${y1} Q ${mx + fallback} ${my} ${x2} ${y2}`;
+  if (mostlyVertical) {
+    return `M ${x1} ${y1} Q ${mx + base} ${my} ${x2} ${y2}`;
+  }
+
+  return `M ${x1} ${y1} Q ${mx} ${my + base} ${x2} ${y2}`;
 }
 
 function render(ast, horizontal) {
   LABEL_BOXES = [];
 
   const laneMap = buildLaneMap(ast);
-  const pos = computePositions(ast, horizontal, laneMap);
-  const { width, height } = computeCanvas(pos);
+
+  const positions = computePositions(
+    ast,
+    horizontal,
+    laneMap
+  );
+
+  const { width, height } =
+    computeCanvas(positions);
 
   let body = '';
 
   ast.steps.forEach((step, si) => {
-    const aliases = getOrderedAliases(step, laneMap);
+    const aliases =
+      getOrderedAliases(step, laneMap);
 
     for (const alias of aliases) {
-      const p = pos[si][alias];
-      body += renderMolecule(alias, step, p.x, p.y);
+      const p = positions[si][alias];
+
+      body += renderMolecule(
+        alias,
+        step,
+        p.x,
+        p.y
+      );
     }
 
     step.arrows.forEach((arrow, ai) => {
-      const f = parseArrowRef(arrow.from ?? '');
-      const t = parseArrowRef(arrow.to ?? '');
+      const fromRef =
+        parseArrowRef(arrow.from ?? '');
 
-      const p1 = pos[si][f.alias];
-      const p2 = pos[si][t.alias];
+      const toRef =
+        parseArrowRef(arrow.to ?? '');
+
+      const p1 = positions[si][fromRef.alias];
+      const p2 = positions[si][toRef.alias];
+
       if (!p1 || !p2) return;
 
-      const a1 = getAtomPos(resolveMol(f.alias, step), f, 'from');
-      const a2 = getAtomPos(resolveMol(t.alias, step), t, 'to');
+      const a1 = getAtomPos(
+        resolveMol(fromRef.alias, step),
+        fromRef,
+        'from'
+      );
+
+      const a2 = getAtomPos(
+        resolveMol(toRef.alias, step),
+        toRef,
+        'to'
+      );
 
       const d = arrowPath(
         p1.x + a1.x,
@@ -315,9 +398,12 @@ function render(ast, horizontal) {
 }
 
 const svg = render(ast, layoutHorizontal);
-const out = `out/${path.basename(mechFile, '.mech')}.svg`;
+
+const out =
+  `out/${path.basename(mechFile, '.mech')}.svg`;
 
 mkdirSync('out', { recursive: true });
+
 writeFileSync(out, svg);
 
 console.log(`Rendered → ${out}`);
