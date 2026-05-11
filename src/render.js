@@ -356,6 +356,9 @@ function render(ast, horizontal) {
   let body = '';
 
   ast.steps.forEach((step, si) => {
+    console.log("STEP", si);
+    console.log("species:", step.species);
+    console.log("arrows:", step.arrows);
     const aliases =
       getOrderedAliases(step, laneMap);
 
