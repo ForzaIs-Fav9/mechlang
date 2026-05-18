@@ -11,14 +11,20 @@ responsibilities of each component in the pipeline.
       ↓
   parse.js        → AST (with persistence post-pass)
       ↓
+semantic-engine.js
+      ↓
   render.js       → SVG string
       ↓
   out/*.svg       → browser / export
 ```
 
-The pipeline is strictly linear. No component reaches backward.
-The parser never touches geometry. The renderer never touches syntax.
+The pipeline is strictly layered.
 
+- `parse.js` handles syntax only
+- `semantic-engine.js` handles chemistry reasoning and inference
+- `render.js` handles visualization only
+
+No component reaches backward across layers.
 ---
 
 ## Components
@@ -68,6 +74,23 @@ Each molecule entry contains:
 - `labels` (optional) — display name overrides for aliased atoms (`Ca → "C"`)
 
 Coordinates are heuristic and template-driven. No chemistry inference.
+
+### `src/semantic-engine.js`
+
+Consumes the parsed AST and performs chemistry-semantic reasoning.
+
+Responsibilities:
+- Infer curved-arrow electron flow from transform semantics
+- Validate semantic transform consistency
+- Emit compiler-style warnings for invalid semantic operations
+- Remain independent from SVG rendering
+
+Current supported inference patterns:
+- SN2 nucleophilic attack
+- Leaving-group departure
+
+The semantic engine is deterministic and heuristic-driven.
+It is intentionally not yet a full graph-rewrite chemistry system.
 
 ### `src/render.js`
 
