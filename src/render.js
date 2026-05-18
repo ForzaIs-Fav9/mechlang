@@ -30,6 +30,98 @@ function resolveMol(alias, step) {
   return molKey ? moleculeRegistry[molKey] : null;
 }
 
+function inferArrowsFromTransforms(step) {
+
+  const inferred = [];
+
+  for (const transform of step.transforms || []) {
+
+    // ── FORM bond inference ───────────────────────────────────────────────
+    if (transform.type === 'form') {
+
+      const [a, b] = transform.bond;
+
+      // SN2 heuristic:
+      // form C-CN
+
+      if (a === 'C' && b === 'CN') {
+
+        let nucRole = null;
+        let subRole = null;
+
+        for (const [role, molKey] of Object.entries(step.species)) {
+
+          // nucleophile
+          if (molKey === 'CN-') {
+            nucRole = role;
+          }
+
+          // electrophile
+          if (
+            molKey.includes('Br') ||
+            molKey.includes('Cl') ||
+            molKey.includes('I')
+          ) {
+            subRole = role;
+          }
+        }
+
+        if (nucRole && subRole) {
+
+          const leavingAtom =
+            step.species[subRole].includes('Br')
+              ? 'Br'
+              : step.species[subRole].includes('Cl')
+                ? 'Cl'
+                : 'I';
+
+          inferred.push({
+            curved: true,
+            from: `${nucRole}.C`,
+            to:   `${subRole}.C-${leavingAtom}`
+          });
+        }
+      }
+    }
+
+    // ── BREAK bond inference ──────────────────────────────────────────────
+    if (transform.type === 'break') {
+
+      const [a, b] = transform.bond;
+
+      // Leaving-group heuristic
+      if (
+        a === 'C' &&
+        ['Br', 'Cl', 'I'].includes(b)
+      ) {
+
+        let subRole = null;
+
+        for (const [role, molKey] of Object.entries(step.species)) {
+
+          if (
+            molKey.includes(b) &&
+            molKey.includes('CH3')
+          ) {
+            subRole = role;
+          }
+        }
+
+        if (subRole) {
+
+          inferred.push({
+            curved: true,
+            from: `${subRole}.C-${b}`,
+            to:   `${subRole}.${b}`
+          });
+        }
+      }
+    }
+  }
+
+  return inferred;
+}
+
 function parseArrowRef(ref) {
   const dotIndex = ref.indexOf('.');
 
@@ -194,7 +286,6 @@ function renderMolecule(alias, step, ox, oy) {
 
   let svg = '';
 
-  // Bonds
   for (const bond of (mol.bonds || [])) {
 
     const [aKey, bKey, order = 1] = bond;
@@ -257,7 +348,6 @@ function renderMolecule(alias, step, ox, oy) {
     }
   }
 
-  // Atom labels
   for (const [key, pos] of Object.entries(mol.atoms)) {
 
     const label =
@@ -304,7 +394,6 @@ function renderMolecule(alias, step, ox, oy) {
     `;
   }
 
-  // Charges
   if (mol.charge && mol.charge !== 0) {
 
     const firstPos =
@@ -573,7 +662,12 @@ function render(ast, horizontal) {
       );
     }
 
-    step.arrows.forEach(
+    const effectiveArrows =
+      step.arrows.length > 0
+        ? step.arrows
+        : inferArrowsFromTransforms(step);
+
+    effectiveArrows.forEach(
       (arrow, ai) => {
 
       const fromRef =
