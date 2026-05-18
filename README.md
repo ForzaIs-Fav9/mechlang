@@ -60,6 +60,30 @@ step {
   )
 }
 ```
+## Semantic Transform Blocks (v0.14)
+
+MechLang now supports semantic bond operations independent from rendering:
+
+```mech
+step {
+  species:
+    nuc = CN-
+    sub = CH3-Br
+
+  transform {
+    form C-CN
+    break C-Br
+  }
+}
+```
+
+Transforms describe chemical state changes semantically rather than manually specifying SVG arrow geometry.
+
+Current supported operations:
+- `form A-B`
+- `break A-B`
+
+Transforms are currently parser-level semantics and may later compile into automatic curved-arrow generation.
 
 ---
 

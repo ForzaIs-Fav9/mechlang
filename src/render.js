@@ -2,6 +2,10 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { parseMechlang } from './parse.js';
 import { moleculeRegistry } from './molecules.js';
+import {
+  validateTransforms,
+  inferArrowsFromTransforms
+} from './semantic-engine.js';
 
 const STEP_Y_GAP = 240;
 const STEP_X_GAP = 260;
@@ -194,7 +198,6 @@ function renderMolecule(alias, step, ox, oy) {
 
   let svg = '';
 
-  // Bonds
   for (const bond of (mol.bonds || [])) {
 
     const [aKey, bKey, order = 1] = bond;
@@ -257,7 +260,6 @@ function renderMolecule(alias, step, ox, oy) {
     }
   }
 
-  // Atom labels
   for (const [key, pos] of Object.entries(mol.atoms)) {
 
     const label =
@@ -304,7 +306,6 @@ function renderMolecule(alias, step, ox, oy) {
     `;
   }
 
-  // Charges
   if (mol.charge && mol.charge !== 0) {
 
     const firstPos =
@@ -553,7 +554,7 @@ function render(ast, horizontal) {
   `;
 
   ast.steps.forEach((step, si) => {
-
+    validateTransforms(step);
     const aliases =
       getOrderedAliases(
         step,
@@ -573,7 +574,12 @@ function render(ast, horizontal) {
       );
     }
 
-    step.arrows.forEach(
+    const effectiveArrows =
+      step.arrows.length > 0
+        ? step.arrows
+        : inferArrowsFromTransforms(step);
+
+    effectiveArrows.forEach(
       (arrow, ai) => {
 
       const fromRef =
@@ -624,21 +630,31 @@ function render(ast, horizontal) {
       const rawEndY =
         p2.y + a2.y;
 
+      const shortenDistance =
+        arrow.inferenceType === 'leaving'
+          ? 4
+          : 12;
+
       const adjustedEnd =
         offsetEndpoint(
           startX,
           startY,
           rawEndX,
           rawEndY,
-          12
+          shortenDistance
         );
+
+      const arrowIndex =
+        arrow.inferenceType === 'leaving'
+          ? ai + 2
+          : ai;
 
       const d = arrowPath(
         startX,
         startY,
         adjustedEnd.x,
         adjustedEnd.y,
-        ai
+        arrowIndex
       );
 
       body += `
