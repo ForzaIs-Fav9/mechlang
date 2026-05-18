@@ -30,6 +30,72 @@ function resolveMol(alias, step) {
   return molKey ? moleculeRegistry[molKey] : null;
 }
 
+function validateTransforms(step) {
+
+  for (const transform of step.transforms || []) {
+
+    // ── form C-CN ────────────────────────────────────────────────────────
+    if (
+      transform.type === 'form' &&
+      transform.bond[0] === 'C' &&
+      transform.bond[1] === 'CN'
+    ) {
+
+      const hasCN =
+        Object.values(step.species)
+          .includes('CN-');
+
+      if (!hasCN) {
+
+        console.warn(
+          '[mechlang] transform requires CN- nucleophile but none was found.'
+        );
+      }
+    }
+
+    // ── break C-X ────────────────────────────────────────────────────────
+    if (
+      transform.type === 'break'
+    ) {
+
+      const [a, b] =
+        transform.bond;
+
+      let found = false;
+
+      for (const molKey of Object.values(step.species)) {
+
+        const mol =
+          moleculeRegistry[molKey];
+
+        if (!mol) continue;
+
+        for (const bond of mol.bonds || []) {
+
+          const [x, y] = bond;
+
+          const direct =
+            x === a && y === b;
+
+          const reverse =
+            x === b && y === a;
+
+          if (direct || reverse) {
+            found = true;
+          }
+        }
+      }
+
+      if (!found) {
+
+        console.warn(
+          `[mechlang] break transform references missing bond ${a}-${b}.`
+        );
+      }
+    }
+  }
+}
+
 function inferArrowsFromTransforms(step) {
 
   const inferred = [];
@@ -646,7 +712,7 @@ function render(ast, horizontal) {
   `;
 
   ast.steps.forEach((step, si) => {
-
+    validateTransforms(step);
     const aliases =
       getOrderedAliases(
         step,
