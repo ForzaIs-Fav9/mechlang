@@ -24,9 +24,6 @@ if (!mechFile) {
 
 const source = readFileSync(mechFile, 'utf8');
 const ast = parseMechlang(source);
-console.log(
-  JSON.stringify(ast, null, 2)
-);
 
 function resolveMol(alias, step) {
   const molKey = step.species[alias];
