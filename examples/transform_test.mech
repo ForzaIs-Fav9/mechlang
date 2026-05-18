@@ -1,0 +1,10 @@
+step {
+  species:
+    nuc = CN-
+    sub = CH3-Br
+
+  transform {
+    form C-CN
+    break C-Br
+  }
+}
