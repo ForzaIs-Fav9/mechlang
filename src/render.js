@@ -34,46 +34,6 @@ function resolveMol(alias, step) {
   return molKey ? moleculeRegistry[molKey] : null;
 }
 
-    // ── BREAK bond inference ──────────────────────────────────────────────
-    if (transform.type === 'break') {
-
-      const [a, b] = transform.bond;
-
-      // Leaving-group heuristic
-      if (
-        a === 'C' &&
-        ['Br', 'Cl', 'I'].includes(b)
-      ) {
-
-        let subRole = null;
-
-        for (const [role, molKey] of Object.entries(step.species)) {
-
-          if (
-            molKey.includes(b) &&
-            molKey.includes('CH3')
-          ) {
-            subRole = role;
-          }
-        }
-
-        if (subRole) {
-
-          inferred.push({
-            curved: true,
-            inferred: true,
-            inferenceType: 'leaving',
-            from: `${subRole}.C-${b}`,
-            to:   `${subRole}.${b}`
-          });
-        }
-      }
-    }
-  }
-
-  return inferred;
-}
-
 function parseArrowRef(ref) {
   const dotIndex = ref.indexOf('.');
 
