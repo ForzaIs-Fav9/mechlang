@@ -84,49 +84,47 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 
 ---
 
-## Phase 4 — Renderer Intelligence (v0.13-v0.15)
+## Phase 4 — Semantic Engine (v0.14)
 
-### R.1 — Species Persistence ✅ (v0.12)
-- `persist: alias1, alias2` syntax in `.mech` files
-- Post-pass in `parse.js` resolves aliases against prior step
-- Renderer fully blind to persistence mechanics
-- Per-step compact lane re-indexing eliminates gap accumulation
+### S.1 — Semantic Transform Blocks
+- `transform {}` syntax
+- `form A-B`
+- `break A-B`
+- AST-level transform representation
 
-### R.2 — Lane Assignment ✅ (v0.12)
-- Global lane map by first appearance
-- Per-step local re-indexing: persistent first, novel packed after
-- No molecule overlap in multi-step diagrams
+### S.2 — Automatic Arrow Inference
+- Semantic transforms infer curved-arrow electron flow
+- Explicit `arrow()` blocks remain supported
+- Deterministic heuristic inference layer
 
-### R.3 — Curved Arrow Rendering ✅ (v0.13)
-- Quadratic Bézier mechanism arrows
-- SVG arrowheads via `marker-end`
-- Collision-aware curved-arrow routing
-- Endpoint offsetting to avoid atom-label overlap
-- Deterministic AST-driven arrow direction
-- Stable rendering in vertical and horizontal layouts
+### S.3 — Semantic Diagnostics
+- Compiler-style semantic warnings
+- Missing nucleophile detection
+- Missing bond detection
+- Graceful degradation without render failure
 
-### R.4 — Semantic Transform Layer (v0.14)
-- `transform {}` block syntax
-- Bond formation semantics (`form A-B`)
-- Bond breaking semantics (`break A-B`)
-- Semantic AST representation independent from rendering
-- Foundation for automatic arrow generation
+### S.4 — Semantic Engine Extraction
+- `semantic-engine.js`
+- Chemistry reasoning separated from renderer
+- Compiler-style layered pipeline
 
-### R.5 — Resonance Arrow (v0.15)
-- Dedicated double-headed arrow type (`⟷`)
-- Distinct from mechanism arrows
-- Parser + renderer support
 ---
 
-## Phase 5 — Hardening (v0.14)
+## Phase 5 — Product Inference (v0.15)
 
-### H.1 — Formal Grammar
-- BNF or PEG grammar document for `.mech` syntax
-- AST versioning
+### P.1 — Heuristic Product Synthesis
+- Infer reaction products from transform operations
+- Initial deterministic substitution patterns
+- No graph rewriting yet
 
-### H.2 — Snapshot Tests
-- Golden SVG outputs for all 6 canonical mechanisms
-- CI regression on every merge
+### P.2 — Product Rendering
+- Render inferred products automatically
+- Optional explicit override support
+
+### P.3 — Reaction-State Engine
+- Foundation for future graph-based chemistry mutation
+- Intermediate-state synthesis
+- Semantic reaction-state transitions
 
 ---
 
