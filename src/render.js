@@ -77,6 +77,8 @@ function inferArrowsFromTransforms(step) {
 
           inferred.push({
             curved: true,
+            inferred: true,
+            inferenceType: 'attack',
             from: `${nucRole}.C`,
             to:   `${subRole}.C-${leavingAtom}`
           });
@@ -111,6 +113,8 @@ function inferArrowsFromTransforms(step) {
 
           inferred.push({
             curved: true,
+            inferred: true,
+            inferenceType: 'leaving',
             from: `${subRole}.C-${b}`,
             to:   `${subRole}.${b}`
           });
@@ -718,21 +722,31 @@ function render(ast, horizontal) {
       const rawEndY =
         p2.y + a2.y;
 
+      const shortenDistance =
+        arrow.inferenceType === 'leaving'
+          ? 4
+          : 12;
+
       const adjustedEnd =
         offsetEndpoint(
           startX,
           startY,
           rawEndX,
           rawEndY,
-          12
+          shortenDistance
         );
+
+      const arrowIndex =
+        arrow.inferenceType === 'leaving'
+          ? ai + 2
+          : ai;
 
       const d = arrowPath(
         startX,
         startY,
         adjustedEnd.x,
         adjustedEnd.y,
-        ai
+        arrowIndex
       );
 
       body += `
