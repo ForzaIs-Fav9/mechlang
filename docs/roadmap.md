@@ -105,17 +105,17 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 - Deterministic AST-driven arrow direction
 - Stable rendering in vertical and horizontal layouts
 
-### R.4 — Resonance Arrow (v0.14)
+### R.4 — Semantic Transform Layer (v0.14)
+- `transform {}` block syntax
+- Bond formation semantics (`form A-B`)
+- Bond breaking semantics (`break A-B`)
+- Semantic AST representation independent from rendering
+- Foundation for automatic arrow generation
+
+### R.5 — Resonance Arrow (v0.15)
 - Dedicated double-headed arrow type (`⟷`)
 - Distinct from mechanism arrows
 - Parser + renderer support
-- Resonance-specific layout behavior
-
-### R.5 — Advanced Collision Resolution (v0.15)
-- Dense multi-arrow routing
-- Automatic curve balancing
-- Shared-region arrow avoidance
-- Canonical textbook-style spacing
 ---
 
 ## Phase 5 — Hardening (v0.14)
