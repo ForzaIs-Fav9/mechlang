@@ -2,6 +2,10 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { parseMechlang } from './parse.js';
 import { moleculeRegistry } from './molecules.js';
+import {
+  validateTransforms,
+  inferArrowsFromTransforms
+} from './semantic-engine.js';
 
 const STEP_Y_GAP = 240;
 const STEP_X_GAP = 260;
@@ -29,128 +33,6 @@ function resolveMol(alias, step) {
   const molKey = step.species[alias];
   return molKey ? moleculeRegistry[molKey] : null;
 }
-
-function validateTransforms(step) {
-
-  for (const transform of step.transforms || []) {
-
-    // ── form C-CN ────────────────────────────────────────────────────────
-    if (
-      transform.type === 'form' &&
-      transform.bond[0] === 'C' &&
-      transform.bond[1] === 'CN'
-    ) {
-
-      const hasCN =
-        Object.values(step.species)
-          .includes('CN-');
-
-      if (!hasCN) {
-
-        console.warn(
-          '[mechlang] transform requires CN- nucleophile but none was found.'
-        );
-      }
-    }
-
-    // ── break C-X ────────────────────────────────────────────────────────
-    if (
-      transform.type === 'break'
-    ) {
-
-      const [a, b] =
-        transform.bond;
-
-      let found = false;
-
-      for (const molKey of Object.values(step.species)) {
-
-        const mol =
-          moleculeRegistry[molKey];
-
-        if (!mol) continue;
-
-        for (const bond of mol.bonds || []) {
-
-          const [x, y] = bond;
-
-          const direct =
-            x === a && y === b;
-
-          const reverse =
-            x === b && y === a;
-
-          if (direct || reverse) {
-            found = true;
-          }
-        }
-      }
-
-      if (!found) {
-
-        console.warn(
-          `[mechlang] break transform references missing bond ${a}-${b}.`
-        );
-      }
-    }
-  }
-}
-
-function inferArrowsFromTransforms(step) {
-
-  const inferred = [];
-
-  for (const transform of step.transforms || []) {
-
-    // ── FORM bond inference ───────────────────────────────────────────────
-    if (transform.type === 'form') {
-
-      const [a, b] = transform.bond;
-
-      // SN2 heuristic:
-      // form C-CN
-
-      if (a === 'C' && b === 'CN') {
-
-        let nucRole = null;
-        let subRole = null;
-
-        for (const [role, molKey] of Object.entries(step.species)) {
-
-          // nucleophile
-          if (molKey === 'CN-') {
-            nucRole = role;
-          }
-
-          // electrophile
-          if (
-            molKey.includes('Br') ||
-            molKey.includes('Cl') ||
-            molKey.includes('I')
-          ) {
-            subRole = role;
-          }
-        }
-
-        if (nucRole && subRole) {
-
-          const leavingAtom =
-            step.species[subRole].includes('Br')
-              ? 'Br'
-              : step.species[subRole].includes('Cl')
-                ? 'Cl'
-                : 'I';
-
-          inferred.push({
-            curved: true,
-            inferred: true,
-            inferenceType: 'attack',
-            from: `${nucRole}.C`,
-            to:   `${subRole}.C-${leavingAtom}`
-          });
-        }
-      }
-    }
 
     // ── BREAK bond inference ──────────────────────────────────────────────
     if (transform.type === 'break') {
