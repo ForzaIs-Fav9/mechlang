@@ -19,9 +19,10 @@ export function parseMechlang(source: string): AST
 }
 
 Step {
-  species: { [role: string]: string }   // role → molecule registry key (fully resolved, including persisted)
-  arrows:  Arrow[]
-  persist: string[]                     // raw alias list — informational only, already resolved into species
+  species:     { [role: string]: string }   // role → molecule registry key (fully resolved, including persisted)
+  arrows:      Arrow[]
+  transforms:  Transform[]
+  persist:     string[]                     // raw alias list — informational only, already resolved into species
 }
 
 Arrow {
