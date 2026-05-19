@@ -286,7 +286,9 @@ function computePositions(
       STEP_Y_ORIGIN +
       si * STEP_Y_GAP;
 
+    // ─────────────────────────────────────
     // Reactants
+    // ─────────────────────────────────────
 
     orderedReactants.forEach(
       (alias, i) => {
@@ -318,7 +320,9 @@ function computePositions(
       }
     );
 
+    // ─────────────────────────────────────
     // Products
+    // ─────────────────────────────────────
 
     orderedProducts.forEach(
       (alias, i) => {
@@ -340,12 +344,18 @@ function computePositions(
 
           stepPos[alias] = {
 
+            // Keep products clearly separated
+            // from reaction center
+
             x:
               reactionCenterX +
-              300,
+              450,
+
+            // Stack vertically
 
             y:
               reactionCenterY +
+              120 +
               i * MOLECULE_Y_GAP
           };
         }
