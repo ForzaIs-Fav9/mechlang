@@ -37,54 +37,20 @@ export function inferProducts(step) {
   }
 
   // ───────────────────────────────────────────────────────────────────────
-  // Semantic transform analysis
+  // Normalized semantic transforms
   // ───────────────────────────────────────────────────────────────────────
 
-  let formsCCN = false;
-  let formsCOH = false;
-  let breaksCBr = false;
+  const transformSet =
+    new Set();
 
   for (const transform of step.transforms || []) {
 
-    if (
-      transform.type === 'form'
-    ) {
+    const [a, b] =
+      transform.bond;
 
-      const [a, b] =
-        transform.bond;
-
-      // form C-CN
-      if (
-        a === 'C' &&
-        b === 'CN'
-      ) {
-        formsCCN = true;
-      }
-
-      // form C-OH
-      if (
-        a === 'C' &&
-        b === 'OH'
-      ) {
-        formsCOH = true;
-      }
-    }
-
-    if (
-      transform.type === 'break'
-    ) {
-
-      const [a, b] =
-        transform.bond;
-
-      // break C-Br
-      if (
-        a === 'C' &&
-        b === 'Br'
-      ) {
-        breaksCBr = true;
-      }
-    }
+    transformSet.add(
+      `${transform.type}:${a}-${b}`
+    );
   }
 
   // ───────────────────────────────────────────────────────────────────────
@@ -94,8 +60,8 @@ export function inferProducts(step) {
   if (
     nucleophile === 'CN-' &&
     substrate === 'CH3-Br' &&
-    formsCCN &&
-    breaksCBr
+    transformSet.has('form:C-CN') &&
+    transformSet.has('break:C-Br')
   ) {
 
     result.inferred = true;
@@ -114,8 +80,8 @@ export function inferProducts(step) {
   if (
     nucleophile === 'OH-' &&
     substrate === 'CH3-Br' &&
-    formsCOH &&
-    breaksCBr
+    transformSet.has('form:C-OH') &&
+    transformSet.has('break:C-Br')
   ) {
 
     result.inferred = true;
