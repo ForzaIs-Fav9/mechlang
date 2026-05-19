@@ -1,3 +1,49 @@
+function classifySpecies(mol) {
+
+  const info = {
+    role: null,
+    leavingGroup: null
+  };
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Nucleophiles
+  // ───────────────────────────────────────────────────────────────────────
+
+  if (mol === 'CN-') {
+    info.role = 'cyanide';
+  }
+
+  if (mol === 'OH-') {
+    info.role = 'hydroxide';
+  }
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Methyl halides
+  // ───────────────────────────────────────────────────────────────────────
+
+  if (
+    mol.startsWith('CH3-')
+  ) {
+
+    if (mol.endsWith('Br')) {
+      info.role = 'methyl-halide';
+      info.leavingGroup = 'Br';
+    }
+
+    if (mol.endsWith('Cl')) {
+      info.role = 'methyl-halide';
+      info.leavingGroup = 'Cl';
+    }
+
+    if (mol.endsWith('I')) {
+      info.role = 'methyl-halide';
+      info.leavingGroup = 'I';
+    }
+  }
+
+  return info;
+}
+
 export function inferProducts(step) {
 
   const result = {
@@ -13,26 +59,26 @@ export function inferProducts(step) {
   let nucleophile = null;
   let substrate = null;
 
+  // ───────────────────────────────────────────────────────────────────────
+  // Semantic species classification
+  // ───────────────────────────────────────────────────────────────────────
+
   for (const [, mol] of species) {
 
-    // ── Supported nucleophiles ───────────────────────────────────────────
+    const info =
+      classifySpecies(mol);
+
     if (
-      [
-        'CN-',
-        'OH-',
-        'Cl-',
-        'Br-',
-        'I-'
-      ].includes(mol)
+      info.role === 'cyanide' ||
+      info.role === 'hydroxide'
     ) {
-      nucleophile = mol;
+      nucleophile = info;
     }
 
-    // ── Supported substrates ─────────────────────────────────────────────
     if (
-      mol.startsWith('CH3-')
+      info.role === 'methyl-halide'
     ) {
-      substrate = mol;
+      substrate = info;
     }
   }
 
@@ -58,8 +104,9 @@ export function inferProducts(step) {
   // ───────────────────────────────────────────────────────────────────────
 
   if (
-    nucleophile === 'CN-' &&
-    substrate === 'CH3-Br' &&
+    nucleophile?.role === 'cyanide' &&
+    substrate?.role === 'methyl-halide' &&
+    substrate?.leavingGroup === 'Br' &&
     transformSet.has('form:C-CN') &&
     transformSet.has('break:C-Br')
   ) {
@@ -78,8 +125,9 @@ export function inferProducts(step) {
   // ───────────────────────────────────────────────────────────────────────
 
   if (
-    nucleophile === 'OH-' &&
-    substrate === 'CH3-Br' &&
+    nucleophile?.role === 'hydroxide' &&
+    substrate?.role === 'methyl-halide' &&
+    substrate?.leavingGroup === 'Br' &&
     transformSet.has('form:C-OH') &&
     transformSet.has('break:C-Br')
   ) {
