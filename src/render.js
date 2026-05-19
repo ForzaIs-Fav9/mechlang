@@ -288,20 +288,21 @@ function computePositions(
 
             x:
               reactionCenterX +
-              420 +
-              i * MOLECULE_X_GAP,
+              300,
 
             y:
-              reactionCenterY
+              reactionCenterY +
+              i * MOLECULE_Y_GAP
           };
         }
       }
     );
 
     return stepPos;
+
   });
 }
-
+    
 function computeCanvas(positions) {
 
   let maxX = 0;
