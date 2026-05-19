@@ -140,12 +140,14 @@ export function inferProducts(step) {
 
   for (const rule of SN2_RULES) {
 
+    const leavingTransform =
+      `break:C-${substrate?.leavingGroup}`;
+
     const validSN2 =
       nucleophile?.role === rule.nucleophile &&
       substrate?.role === 'methyl-halide' &&
-      substrate?.leavingGroup === 'Br' &&
       transformSet.has(rule.formTransform) &&
-      transformSet.has('break:C-Br');
+      transformSet.has(leavingTransform);
 
     if (validSN2) {
 
