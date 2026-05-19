@@ -972,13 +972,72 @@ function render(ast, horizontal) {
             ny * 18;
         } 
         
-        body += renderArrow(
-          fromRef.x,
-          fromRef.y,
-          targetX,
-          targetY,
-          ai
-        );
+        let path;
+
+        if (
+          arrow.inferenceType === 'leaving'
+        ) {
+
+          const dx =
+            targetX - fromRef.x;
+
+          const dy =
+            targetY - fromRef.y;
+
+          const len =
+            Math.sqrt(
+              dx * dx +
+              dy * dy
+            ) || 1;
+
+          // perpendicular vector
+
+          const nx =
+            -dy / len;
+
+          const ny =
+            dx / len;
+
+          // control point pushed away
+          // from bond axis
+
+          const cx =
+            fromRef.x +
+            dx * 0.5 +
+            nx * 22;
+
+          const cy =
+            fromRef.y +
+            dy * 0.5 +
+            ny * 22;
+
+          path = `
+            M ${fromRef.x} ${fromRef.y}
+            Q ${cx} ${cy}
+            ${targetX} ${targetY}
+          `;
+
+        } else {
+
+          path =
+            arrowPath(
+              fromRef.x,
+              fromRef.y,
+              targetX,
+              targetY,
+              ai
+            );
+        }
+
+        body += `
+          <path
+            d="${path}"
+            fill="none"
+            stroke="black"
+            stroke-width="1.6"
+            marker-end="url(#arrowhead)"
+          />
+        `;
       }
     );
   });
