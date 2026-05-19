@@ -139,9 +139,11 @@ export function inferProducts(step) {
     !result.inferred
   ) {
 
-    result.diagnostics.push(
-      'Unable to infer products for transform sequence.'
-    );
+    result.diagnostics.push({
+      type: 'unsupported-transform',
+      message:
+        'Unable to infer products for transform sequence.'
+    });
   }
 
   return result;
