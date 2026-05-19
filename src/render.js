@@ -1009,20 +1009,9 @@ function render(ast, horizontal) {
             fromRef.y +
             ny * 8;
 
-          const cx =
-            startX +
-            dx * 0.5 +
-            nx * 12;
-
-          const cy =
-            startY +
-            dy * 0.5 +
-            ny * 12;
-
           path = `
             M ${startX} ${startY}
-            Q ${cx} ${cy}
-            ${targetX} ${targetY}
+             L ${targetX} ${targetY}
           `;
 
         } else {
