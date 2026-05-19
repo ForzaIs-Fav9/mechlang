@@ -113,17 +113,20 @@ function buildLaneMap(ast) {
   return map;
 }
 
-function getOrderedAliases(entities, laneMap) {
+function getOrderedAliases(
+  entities,
+  laneMap
+) {
 
   return entities
     .slice()
     .sort((a, b) => {
 
       const laneA =
-        laneMap[a.alias] ?? 0;
+        laneMap.get(a.molecule) ?? 0;
 
       const laneB =
-        laneMap[b.alias] ?? 0;
+        laneMap.get(b.molecule) ?? 0;
 
       return laneA - laneB;
     })
@@ -149,12 +152,13 @@ function buildRenderableStep(step) {
   inference.products.forEach(
     (product, index) => {
 
-    const alias =
-      `inferred_${index}`;
+      const alias =
+        `inferred_${index}`;
 
-    renderedStep.species[alias] =
-      product;
-  });
+      renderedStep.species[alias] =
+        product;
+    }
+  );
 
   return renderedStep;
 }
@@ -162,10 +166,6 @@ function buildRenderableStep(step) {
 function buildRenderEntities(step) {
 
   const entities = [];
-
-  // ───────────────────────────────────────────────────────────────────────
-  // Explicit species → reactants
-  // ───────────────────────────────────────────────────────────────────────
 
   for (
     const [alias, molecule]
@@ -206,39 +206,39 @@ function computePositions(
         laneMap
       );
 
-    const rowY =
-      TOP_MARGIN +
-      si * STEP_VERTICAL_SPACING;
+    const stepPos = {};
 
-    const colX =
-      LEFT_MARGIN +
-      si * STEP_HORIZONTAL_SPACING;
-
-    const positions = {};
-
-    aliases.forEach((alias, i) => {
+    aliases.forEach((alias, localIndex) => {
 
       if (horizontal) {
 
-        positions[alias] = {
-          x: colX,
+        stepPos[alias] = {
+
+          x:
+            STEP_X_ORIGIN +
+            si * STEP_X_GAP,
+
           y:
-            TOP_MARGIN +
-            i * MOLECULE_VERTICAL_SPACING
+            STEP_Y_ORIGIN +
+            localIndex * MOLECULE_Y_GAP
         };
 
       } else {
 
-        positions[alias] = {
+        stepPos[alias] = {
+
           x:
-            LEFT_MARGIN +
-            i * MOLECULE_HORIZONTAL_SPACING,
-          y: rowY
+            STEP_X_ORIGIN +
+            localIndex * MOLECULE_X_GAP,
+
+          y:
+            STEP_Y_ORIGIN +
+            si * STEP_Y_GAP
         };
       }
     });
 
-    return positions;
+    return stepPos;
   });
 }
 
@@ -604,25 +604,90 @@ function arrowPath(
   `;
 }
 
+function resolveAnchor(
+  refString,
+  stepPos,
+  step,
+  role = 'to'
+) {
+
+  const ref =
+    parseArrowRef(refString);
+
+  const mol =
+    resolveMol(ref.alias, step);
+
+  const atom =
+    getAtomPos(mol, ref, role);
+
+  const origin =
+    stepPos[ref.alias];
+
+  if (!origin) {
+    return null;
+  }
+
+  return {
+    x: origin.x + atom.x,
+    y: origin.y + atom.y
+  };
+}
+
+function renderArrow(
+  x1,
+  y1,
+  x2,
+  y2,
+  arrowIndex = 0
+) {
+
+  const adjusted =
+    offsetEndpoint(
+      x1,
+      y1,
+      x2,
+      y2
+    );
+
+  const path =
+    arrowPath(
+      x1,
+      y1,
+      adjusted.x,
+      adjusted.y,
+      arrowIndex
+    );
+
+  return `
+    <path
+      d="${path}"
+      fill="none"
+      stroke="black"
+      stroke-width="1.6"
+      marker-end="url(#arrowhead)"
+    />
+  `;
+}
+
 function render(ast, horizontal) {
 
   LABEL_BOXES = [];
 
   const renderableSteps =
-  ast.steps.map(buildRenderableStep);
+    ast.steps.map(buildRenderableStep);
 
-const laneMap =
-  buildLaneMap({
-    steps: renderableSteps
-  });
+  const laneMap =
+    buildLaneMap({
+      steps: renderableSteps
+    });
 
-const positions =
-  computePositions(
-    renderableSteps,
-    layoutHorizontal,
-    laneMap
-  );
-  
+  const positions =
+    computePositions(
+      renderableSteps,
+      horizontal,
+      laneMap
+    );
+
   const { width, height } =
     computeCanvas(positions);
 
@@ -648,64 +713,66 @@ const positions =
 
   renderableSteps.forEach((step, si) => {
 
-  validateTransforms(step);
+    validateTransforms(step);
 
-  const entities =
-    buildRenderEntities(step);
+    const entities =
+      buildRenderEntities(step);
 
-  const aliases =
-    getOrderedAliases(
-      entities,
-      laneMap
-    );
+    const aliases =
+      getOrderedAliases(
+        entities,
+        laneMap
+      );
 
-  for (const alias of aliases) {
+    for (const alias of aliases) {
 
-    const p =
-      positions[si][alias];
+      const p =
+        positions[si][alias];
 
-    body += renderMolecule(
-      alias,
-      step,
-      p.x,
-      p.y
-    );
-  }
-
-  const effectiveArrows =
-    step.arrows.length > 0
-      ? step.arrows
-      : inferArrowsFromTransforms(step);
-
-  effectiveArrows.forEach(
-    (arrow, ai) => {
-
-      const fromRef =
-        resolveAnchor(
-          arrow.from,
-          positions[si],
-          step
-        );
-
-      const toRef =
-        resolveAnchor(
-          arrow.to,
-          positions[si],
-          step
-        );
-
-      if (!fromRef || !toRef) return;
-
-      body += renderArrow(
-        fromRef.x,
-        fromRef.y,
-        toRef.x,
-        toRef.y,
-        ai
+      body += renderMolecule(
+        alias,
+        step,
+        p.x,
+        p.y
       );
     }
-  );
-});
+
+    const effectiveArrows =
+      step.arrows.length > 0
+        ? step.arrows
+        : inferArrowsFromTransforms(step);
+
+    effectiveArrows.forEach(
+      (arrow, ai) => {
+
+        const fromRef =
+          resolveAnchor(
+            arrow.from,
+            positions[si],
+            step,
+            'from'
+          );
+
+        const toRef =
+          resolveAnchor(
+            arrow.to,
+            positions[si],
+            step,
+            'to'
+          );
+
+        if (!fromRef || !toRef) return;
+
+        body += renderArrow(
+          fromRef.x,
+          fromRef.y,
+          toRef.x,
+          toRef.y,
+          ai
+        );
+      }
+    );
+  });
 
   return `
     <svg
