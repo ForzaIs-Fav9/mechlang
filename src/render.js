@@ -71,68 +71,76 @@ function parseArrowRef(ref) {
 function getAtomPos(
   mol,
   ref,
-  role = 'to'
-) {
+  role='to'
+){
 
-  if (!mol) {
-    return {
+  if(!mol){
+
+    return{
       x:0,
       y:0
     };
   }
 
   // Bond reference
-  if (
+
+  if(
 
     ref.atomB &&
     mol.atoms[ref.atomLabel] &&
     mol.atoms[ref.atomB]
 
-  ) {
+  ){
 
-    const a =
+    const a=
       mol.atoms[
         ref.atomLabel
       ];
 
-    const b =
+    const b=
       mol.atoms[
         ref.atomB
       ];
 
-    // bond origin
-    if (
-      role === 'from'
-    ) {
+    const midpoint={
 
-      return {
+      x:
+        (a.x+b.x)/2,
 
-        x:
-          (a.x+b.x)/2,
+      y:
+        (a.y+b.y)/2
+    };
 
-        y:
-          (a.y+b.y)/2
-      };
+    // leaving-group arrow originates
+    // from bond midpoint
+
+    if(
+      role==='from'
+    ){
+      return midpoint;
     }
 
-    // bond target
-    return a;
+    // attack arrow also targets
+    // bond midpoint
+
+    return midpoint;
   }
 
-  // single atom reference
-  if (
+  if(
+
     ref.atomLabel &&
     mol.atoms[
       ref.atomLabel
     ]
-  ) {
+
+  ){
 
     return mol.atoms[
       ref.atomLabel
     ];
   }
 
-  return (
+  return(
     Object.values(
       mol.atoms
     )[0]
