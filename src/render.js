@@ -665,83 +665,75 @@ function arrowPath(
   const dx = x2 - x1;
   const dy = y2 - y1;
 
+  const distance =
+    Math.sqrt(
+      dx * dx +
+      dy * dy
+    );
+
+  // Tiny arrows:
+  // avoid artificial loops
+
+  if (
+    distance < 50
+  ) {
+
+    return `
+      M ${x1} ${y1}
+      L ${x2} ${y2}
+    `;
+  }
+
   const mostlyVertical =
-    Math.abs(dy) > Math.abs(dx);
+    Math.abs(dy) >
+    Math.abs(dx);
 
   const base =
     24 + arrowIndex * 6;
 
-  const attempts = [
-    base,
-    base + 10,
-    base + 20
-  ];
-
-  for (const mag of attempts) {
-
-    let cx;
-    let cy;
-
-    if (mostlyVertical) {
-
-      cx = x1 + (dx * 0.35);
-      cy = y1 + (dy * 0.5);
-
-      const side =
-        dx >= 0 ? 1 : -1;
-
-      cx += side * mag;
-
-    } else {
-
-      cx = x1 + (dx * 0.5);
-      cy = y1 + (dy * 0.35);
-
-      const side =
-        dy >= 0 ? 1 : -1;
-
-      cy += side * mag;
-    }
-
-    if (
-      !collides(
-        x1,
-        y1,
-        cx,
-        cy,
-        x2,
-        y2
-      )
-    ) {
-
-      return `
-        M ${x1} ${y1}
-        Q ${cx} ${cy}
-        ${x2} ${y2}
-      `;
-    }
-  }
+  let cx;
+  let cy;
 
   if (mostlyVertical) {
 
-    return `
-      M ${x1} ${y1}
-      Q ${
-        x1 + dx * 0.35 + base
-      } ${
-        y1 + dy * 0.5
-      }
-      ${x2} ${y2}
-    `;
+    cx =
+      x1 +
+      dx * 0.35;
+
+    cy =
+      y1 +
+      dy * 0.5;
+
+    const side =
+      dx >= 0
+        ? 1
+        : -1;
+
+    cx +=
+      side * base;
+
+  } else {
+
+    cx =
+      x1 +
+      dx * 0.5;
+
+    cy =
+      y1 +
+      dy * 0.35;
+
+    const side =
+      dy >= 0
+        ? 1
+        : -1;
+
+    cy +=
+      side * base;
   }
 
   return `
     M ${x1} ${y1}
-    Q ${
-      x1 + dx * 0.5
-    } ${
-      y1 + dy * 0.35 + base
-    }
+    Q ${cx} ${cy}
     ${x2} ${y2}
   `;
 }
