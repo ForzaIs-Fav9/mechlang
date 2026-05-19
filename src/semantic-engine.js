@@ -226,20 +226,21 @@ export function inferArrowsFromTransforms(
 
           inferred.push({
 
-            curved:true,
-            inferred:true,
+            curved: true,
+            inferred: true,
 
             inferenceType:
               'leaving',
 
+            // originate at carbon
             from:
-              `${subRole}.C-${b}`,
+              `${subRole}.C`,
 
+            // terminate at leaving atom
             to:
               `${subRole}.${b}`,
 
-            local:true
-
+            local: true
           });
         }
       }
