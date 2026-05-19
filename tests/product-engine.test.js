@@ -141,6 +141,34 @@ function runTests() {
     );
   }
 
+  // ───────────────────────────────────────────────────────────────────────
+  // Test 5 — Species alone should NOT infer products
+  // ───────────────────────────────────────────────────────────────────────
+
+  {
+    const step = {
+
+      species: {
+        nuc: 'CN-',
+        sub: 'CH3-Br'
+      },
+
+      transforms: [],
+
+      arrows: [],
+      persist: []
+    };
+
+    const products =
+      inferProducts(step);
+
+    assert.deepStrictEqual(
+      products,
+      [],
+      'Species presence alone should not infer products'
+    );
+  }
+
   console.log(
     'All product-engine tests passed.'
   );
