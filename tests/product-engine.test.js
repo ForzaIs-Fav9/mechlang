@@ -209,7 +209,11 @@ function runTests() {
     assert.deepStrictEqual(
       result.diagnostics,
       [
-        'Unable to infer products for transform sequence.'
+        {
+          type: 'unsupported-transform',
+          message:
+            'Unable to infer products for transform sequence.'
+        }
       ],
       'Expected unsupported transform diagnostic'
     );
