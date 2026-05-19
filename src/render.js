@@ -1008,10 +1008,16 @@ function render(ast, horizontal) {
           const startY =
             fromRef.y +
             ny * 4;
+          
+          const endX = 
+            toRef.x;
+          
+          const endY = 
+            toRef.y;
 
           path = `
             M ${startX} ${startY}
-             L ${targetX} ${targetY}
+             L ${endX} ${endY}
           `;
 
         } else {
