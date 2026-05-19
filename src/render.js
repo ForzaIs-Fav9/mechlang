@@ -1003,11 +1003,11 @@ function render(ast, horizontal) {
 
           const startX =
             fromRef.x +
-            nx * 8;
+            nx * 4;
 
           const startY =
             fromRef.y +
-            ny * 8;
+            ny * 4;
 
           path = `
             M ${startX} ${startY}
