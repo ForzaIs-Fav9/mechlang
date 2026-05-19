@@ -943,29 +943,12 @@ function render(ast, horizontal) {
           arrow.inferenceType === 'leaving'
         ) {
 
-          const dx =
-            toRef.x - fromRef.x;
-
-          const dy =
-            toRef.y - fromRef.y;
-
-          const len =
-            Math.sqrt(
-              dx*dx +
-              dy*dy
-            ) || 1;
-
-          // extend slightly beyond Br
-          // so electron departure is visible
-
           targetX =
-            toRef.x +
-            (dx/len) * 30;
+            toRef.x;
 
           targetY =
-            toRef.y +
-            (dy/len) * 30;
-        }
+            toRef.y;
+        } 
         
         body += renderArrow(
           fromRef.x,
