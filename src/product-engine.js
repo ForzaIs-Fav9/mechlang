@@ -1,6 +1,10 @@
 export function inferProducts(step) {
 
-  const inferred = [];
+  const result = {
+    inferred: false,
+    mechanism: null,
+    products: []
+  };
 
   const species =
     Object.entries(step.species);
@@ -93,8 +97,13 @@ export function inferProducts(step) {
     breaksCBr
   ) {
 
-    inferred.push('CH3-CN');
-    inferred.push('Br-');
+    result.inferred = true;
+    result.mechanism = 'SN2';
+
+    result.products.push(
+      'CH3-CN',
+      'Br-'
+    );
   }
 
   // ───────────────────────────────────────────────────────────────────────
@@ -108,9 +117,14 @@ export function inferProducts(step) {
     breaksCBr
   ) {
 
-    inferred.push('CH3-OH');
-    inferred.push('Br-');
+    result.inferred = true;
+    result.mechanism = 'SN2';
+
+    result.products.push(
+      'CH3-OH',
+      'Br-'
+    );
   }
 
-  return inferred;
+  return result;
 }
