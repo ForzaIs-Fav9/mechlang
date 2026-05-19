@@ -1001,18 +1001,26 @@ function render(ast, horizontal) {
           // control point pushed away
           // from bond axis
 
-          const cx =
+          const startX =
             fromRef.x +
+            nx * 8;
+
+          const startY =
+            fromRef.y +
+            ny * 8;
+
+          const cx =
+            startX +
             dx * 0.5 +
-            nx * 22;
+            nx * 12;
 
           const cy =
-            fromRef.y +
+            startY +
             dy * 0.5 +
-            ny * 22;
+            ny * 12;
 
           path = `
-            M ${fromRef.x} ${fromRef.y}
+            M ${startX} ${startY}
             Q ${cx} ${cy}
             ${targetX} ${targetY}
           `;
