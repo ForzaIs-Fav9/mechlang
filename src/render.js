@@ -800,7 +800,6 @@ function renderArrow(
       y2
     );
   
-  let path;
   path =
     arrowPath(
       x1,
@@ -940,6 +939,8 @@ function render(ast, horizontal) {
         let targetX = toRef.x;
         let targetY = toRef.y;
 
+        let path;
+        
         if (
           arrow.inferenceType === 'leaving'
         ) {
