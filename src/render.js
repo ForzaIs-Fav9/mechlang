@@ -68,39 +68,80 @@ function parseArrowRef(ref) {
   };
 }
 
-function getAtomPos(mol, ref, role = 'to') {
+function getAtomPos(
+  mol,
+  ref,
+  role = 'to'
+) {
+
   if (!mol) {
-    return { x: 0, y: 0 };
+    return {
+      x:0,
+      y:0
+    };
   }
 
-  if(
-    ref.atomB && 
+  // Bond reference
+  if (
+
+    ref.atomB &&
     mol.atoms[ref.atomLabel] &&
     mol.atoms[ref.atomB]
+
   ) {
-    const a = 
+
+    const a =
       mol.atoms[
         ref.atomLabel
       ];
+
     const b =
       mol.atoms[
         ref.atomB
       ];
 
-    return {
+    // bond origin
+    if (
+      role === 'from'
+    ) {
 
-      x:
-        (a.x + b.x)/2,
-      y: 
-        (a.y + b.y)/2
-    };
+      return {
+
+        x:
+          (a.x+b.x)/2,
+
+        y:
+          (a.y+b.y)/2
+      };
+    }
+
+    // bond target
+    return a;
   }
 
-  if (ref.atomLabel && mol.atoms[ref.atomLabel]) {
-    return mol.atoms[ref.atomLabel];
+  // single atom reference
+  if (
+    ref.atomLabel &&
+    mol.atoms[
+      ref.atomLabel
+    ]
+  ) {
+
+    return mol.atoms[
+      ref.atomLabel
+    ];
   }
 
-  return Object.values(mol.atoms)[0] ?? { x: 0, y: 0 };
+  return (
+    Object.values(
+      mol.atoms
+    )[0]
+    ??
+    {
+      x:0,
+      y:0
+    }
+  );
 }
 
 function buildLaneMap(ast) {
