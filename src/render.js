@@ -963,16 +963,13 @@ function render(ast, horizontal) {
 
           // move both anchors off bond axis
 
-          fromRef.x += nx * 10;
-          fromRef.y += ny * 10;
-
           targetX =
             toRef.x +
-            nx * 25;
+            nx * 18;
 
           targetY =
             toRef.y +
-            ny * 25;
+            ny * 18;
         } 
         
         body += renderArrow(
