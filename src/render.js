@@ -232,70 +232,71 @@ function computePositions(
       STEP_Y_ORIGIN +
       si * STEP_Y_GAP;
 
-    // ───────────────────────────────────────────────────────────────────
     // Reactants
-    // ───────────────────────────────────────────────────────────────────
 
     orderedReactants.forEach(
       (alias, i) => {
 
-      if (horizontal) {
+        if (horizontal) {
 
-        stepPos[alias] = {
+          stepPos[alias] = {
 
-          x: reactionCenterX,
+            x:
+              reactionCenterX,
 
-          y:
-            STEP_Y_ORIGIN +
-            i * MOLECULE_Y_GAP
-        };
+            y:
+              STEP_Y_ORIGIN +
+              i * MOLECULE_Y_GAP
+          };
 
-      } else {
+        } else {
 
-        stepPos[alias] = {
+          stepPos[alias] = {
 
-          x:
-            reactionCenterX -
-            160 +
-            i * 120,
+            x:
+              reactionCenterX +
+              i * MOLECULE_X_GAP,
 
-          y: reactionCenterY
-        };
+            y:
+              reactionCenterY
+          };
+        }
       }
-    });
+    );
 
-    // ───────────────────────────────────────────────────────────────────
     // Products
-    // ───────────────────────────────────────────────────────────────────
 
     orderedProducts.forEach(
       (alias, i) => {
 
-      if (horizontal) {
+        if (horizontal) {
 
-        stepPos[alias] = {
+          stepPos[alias] = {
 
-          x: reactionCenterX,
+            x:
+              reactionCenterX,
 
-          y:
-            STEP_Y_ORIGIN +
-            (reactants.length + 3 + i)
-            * MOLECULE_Y_GAP
-        };
+            y:
+              STEP_Y_ORIGIN +
+              (reactants.length + 3 + i)
+              * MOLECULE_Y_GAP
+          };
 
-      } else {
+        } else {
 
-        stepPos[alias] = {
+          stepPos[alias] = {
 
-          x:
-            reactionCenterX +
-            260 +
-            i * 140,
+            x:
+              reactionCenterX +
+              420 +
+              i * MOLECULE_X_GAP,
 
-          y: reactionCenterY
-        };
+            y:
+              reactionCenterY
+          };
+        }
       }
-    });
+    );
 
     return stepPos;
   });
