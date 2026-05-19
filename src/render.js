@@ -200,15 +200,36 @@ function computePositions(
     const entities =
       buildRenderEntities(step);
 
-    const aliases =
+    const reactants =
+      entities.filter(
+        e => e.role === 'reactant'
+      );
+
+    const products =
+      entities.filter(
+        e => e.role === 'product'
+      );
+
+    const orderedReactants =
       getOrderedAliases(
-        entities,
+        reactants,
+        laneMap
+      );
+
+    const orderedProducts =
+      getOrderedAliases(
+        products,
         laneMap
       );
 
     const stepPos = {};
 
-    aliases.forEach((alias, localIndex) => {
+    // ───────────────────────────────────────────────────────────────────
+    // Reactants
+    // ───────────────────────────────────────────────────────────────────
+
+    orderedReactants.forEach(
+      (alias, i) => {
 
       if (horizontal) {
 
@@ -220,7 +241,7 @@ function computePositions(
 
           y:
             STEP_Y_ORIGIN +
-            localIndex * MOLECULE_Y_GAP
+            i * MOLECULE_Y_GAP
         };
 
       } else {
@@ -229,7 +250,44 @@ function computePositions(
 
           x:
             STEP_X_ORIGIN +
-            localIndex * MOLECULE_X_GAP,
+            i * MOLECULE_X_GAP,
+
+          y:
+            STEP_Y_ORIGIN +
+            si * STEP_Y_GAP
+        };
+      }
+    });
+
+    // ───────────────────────────────────────────────────────────────────
+    // Products
+    // ───────────────────────────────────────────────────────────────────
+
+    orderedProducts.forEach(
+      (alias, i) => {
+
+      if (horizontal) {
+
+        stepPos[alias] = {
+
+          x:
+            STEP_X_ORIGIN +
+            si * STEP_X_GAP,
+
+          y:
+            STEP_Y_ORIGIN +
+            (reactants.length + 2 + i)
+            * MOLECULE_Y_GAP
+        };
+
+      } else {
+
+        stepPos[alias] = {
+
+          x:
+            STEP_X_ORIGIN +
+            (reactants.length + 2 + i)
+            * MOLECULE_X_GAP,
 
           y:
             STEP_Y_ORIGIN +
