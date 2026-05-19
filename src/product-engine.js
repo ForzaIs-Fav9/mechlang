@@ -73,6 +73,28 @@ function classifySpecies(mol) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Transform normalization
+// ─────────────────────────────────────────────────────────────────────────
+
+function normalizeTransforms(step) {
+
+  const transformSet =
+    new Set();
+
+  for (const transform of step.transforms || []) {
+
+    const [a, b] =
+      transform.bond;
+
+    transformSet.add(
+      `${transform.type}:${a}-${b}`
+    );
+  }
+
+  return transformSet;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Reaction synthesis helpers
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -148,17 +170,7 @@ export function inferProducts(step) {
   // ───────────────────────────────────────────────────────────────────────
 
   const transformSet =
-    new Set();
-
-  for (const transform of step.transforms || []) {
-
-    const [a, b] =
-      transform.bond;
-
-    transformSet.add(
-      `${transform.type}:${a}-${b}`
-    );
-  }
+    normalizeTransforms(step);
 
   // ───────────────────────────────────────────────────────────────────────
   // Data-driven SN2 inference
