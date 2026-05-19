@@ -955,12 +955,16 @@ function render(ast, horizontal) {
               dy * dy
             ) || 1;
 
-          // perpendicular vector
           const nx =
             -dy / len;
 
           const ny =
             dx / len;
+
+          // move both anchors off bond axis
+
+          fromRef.x += nx * 10;
+          fromRef.y += ny * 10;
 
           targetX =
             toRef.x +
