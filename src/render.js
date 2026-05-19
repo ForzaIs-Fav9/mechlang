@@ -625,15 +625,32 @@ function offsetEndpoint(
   const dy = y2 - y1;
 
   const len =
-    Math.sqrt(dx * dx + dy * dy) || 1;
+    Math.sqrt(
+      dx * dx +
+      dy * dy
+    ) || 1;
+
+  // Don't shorten tiny arrows
+
+  if (
+    len < distance * 2
+  ) {
+
+    return {
+      x: x2,
+      y: y2
+    };
+  }
 
   return {
 
     x:
-      x2 - (dx / len) * distance,
+      x2 -
+      (dx / len) * distance,
 
     y:
-      y2 - (dy / len) * distance
+      y2 -
+      (dy / len) * distance
   };
 }
 
