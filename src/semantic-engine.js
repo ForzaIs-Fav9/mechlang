@@ -234,7 +234,7 @@ export function inferArrowsFromTransforms(
 
             // originate at carbon
             from:
-              `${subRole}.C`,
+              `${subRole}.C-${b}`,
 
             // terminate at leaving atom
             to:
