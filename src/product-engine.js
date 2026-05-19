@@ -5,10 +5,12 @@ const SPECIES_RULES = {
   // ───────────────────────────────────────────────────────────────────────
 
   'CN-': {
+    category: 'nucleophile',
     role: 'cyanide'
   },
 
   'OH-': {
+    category: 'nucleophile',
     role: 'hydroxide'
   }
 };
@@ -20,6 +22,7 @@ const SPECIES_RULES = {
 function classifySpecies(mol) {
 
   const info = {
+    category: null,
     role: null,
     leavingGroup: null,
     molecule: mol
@@ -48,16 +51,19 @@ function classifySpecies(mol) {
   ) {
 
     if (mol.endsWith('Br')) {
+      info.category = 'substrate';
       info.role = 'methyl-halide';
       info.leavingGroup = 'Br';
     }
 
     if (mol.endsWith('Cl')) {
+      info.category = 'substrate';
       info.role = 'methyl-halide';
       info.leavingGroup = 'Cl';
     }
 
     if (mol.endsWith('I')) {
+      info.category = 'substrate';
       info.role = 'methyl-halide';
       info.leavingGroup = 'I';
     }
@@ -125,14 +131,13 @@ export function inferProducts(step) {
       classifySpecies(mol);
 
     if (
-      info.role === 'cyanide' ||
-      info.role === 'hydroxide'
+      info.category === 'nucleophile'
     ) {
       nucleophile = info;
     }
 
     if (
-      info.role === 'methyl-halide'
+      info.category === 'substrate'
     ) {
       substrate = info;
     }
