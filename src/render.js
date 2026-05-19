@@ -73,22 +73,27 @@ function getAtomPos(mol, ref, role = 'to') {
     return { x: 0, y: 0 };
   }
 
-  if (
-    ref.atomB &&
+  if(
+    ref.atomB && 
     mol.atoms[ref.atomLabel] &&
     mol.atoms[ref.atomB]
   ) {
-    const a = mol.atoms[ref.atomLabel];
-    const b = mol.atoms[ref.atomB];
+    const a = 
+      mol.atoms[
+        ref.atomLabel
+      ];
+    const b =
+      mol.atoms[
+        ref.atomB
+      ];
 
-    if (role === 'from') {
-      return {
-        x: (a.x + b.x) / 2,
-        y: (a.y + b.y) / 2
-      };
-    }
+    return {
 
-    return a;
+      x:
+        (a.x + b.x)/2,
+      y: 
+        (a.y + b.y)/2
+    };
   }
 
   if (ref.atomLabel && mol.atoms[ref.atomLabel]) {
@@ -674,15 +679,6 @@ function resolveAnchor(
 
   const ref =
     parseArrowRef(refString);
-
-  // Ignore inferred products
-  if (
-    ref.alias.startsWith(
-      'inferred_'
-    )
-  ) {
-    return null;
-  }
 
   const mol =
     resolveMol(
