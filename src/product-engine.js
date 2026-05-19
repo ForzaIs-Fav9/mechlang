@@ -2,7 +2,8 @@ function classifySpecies(mol) {
 
   const info = {
     role: null,
-    leavingGroup: null
+    leavingGroup: null,
+    molecule: mol
   };
 
   // ───────────────────────────────────────────────────────────────────────
@@ -42,6 +43,45 @@ function classifySpecies(mol) {
   }
 
   return info;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Reaction synthesis helpers
+// ─────────────────────────────────────────────────────────────────────────
+
+function synthesizeSN2Products(
+  nucleophile,
+  substrate
+) {
+
+  const products = [];
+
+  // Cyanide substitution
+  if (
+    nucleophile.role === 'cyanide'
+  ) {
+
+    products.push(
+      'CH3-CN'
+    );
+  }
+
+  // Hydroxide substitution
+  if (
+    nucleophile.role === 'hydroxide'
+  ) {
+
+    products.push(
+      'CH3-OH'
+    );
+  }
+
+  // Leaving group
+  products.push(
+    `${substrate.leavingGroup}-`
+  );
+
+  return products;
 }
 
 export function inferProducts(step) {
@@ -114,10 +154,11 @@ export function inferProducts(step) {
     result.inferred = true;
     result.mechanism = 'SN2';
 
-    result.products.push(
-      'CH3-CN',
-      'Br-'
-    );
+    result.products =
+      synthesizeSN2Products(
+        nucleophile,
+        substrate
+      );
   }
 
   // ───────────────────────────────────────────────────────────────────────
@@ -135,10 +176,11 @@ export function inferProducts(step) {
     result.inferred = true;
     result.mechanism = 'SN2';
 
-    result.products.push(
-      'CH3-OH',
-      'Br-'
-    );
+    result.products =
+      synthesizeSN2Products(
+        nucleophile,
+        substrate
+      );
   }
 
   // ───────────────────────────────────────────────────────────────────────
