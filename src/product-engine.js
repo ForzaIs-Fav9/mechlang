@@ -50,39 +50,34 @@ function classifySpecies(mol) {
 // ─────────────────────────────────────────────────────────────────────────
 
 function synthesizeSN2Products(
-  nucleophile,
+  rule,
   substrate
 ) {
 
-  const products = [];
-
-  // Cyanide substitution
-  if (
-    nucleophile.role === 'cyanide'
-  ) {
-
-    products.push(
-      'CH3-CN'
-    );
-  }
-
-  // Hydroxide substitution
-  if (
-    nucleophile.role === 'hydroxide'
-  ) {
-
-    products.push(
-      'CH3-OH'
-    );
-  }
-
-  // Leaving group
-  products.push(
+  return [
+    rule.product,
     `${substrate.leavingGroup}-`
-  );
-
-  return products;
+  ];
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Data-driven SN2 inference rules
+// ─────────────────────────────────────────────────────────────────────────
+
+const SN2_RULES = [
+
+  {
+    nucleophile: 'cyanide',
+    formTransform: 'form:C-CN',
+    product: 'CH3-CN'
+  },
+
+  {
+    nucleophile: 'hydroxide',
+    formTransform: 'form:C-OH',
+    product: 'CH3-OH'
+  }
+];
 
 export function inferProducts(step) {
 
@@ -140,47 +135,29 @@ export function inferProducts(step) {
   }
 
   // ───────────────────────────────────────────────────────────────────────
-  // SN2: Cyanide substitution
+  // Data-driven SN2 inference
   // ───────────────────────────────────────────────────────────────────────
 
-  if (
-    nucleophile?.role === 'cyanide' &&
-    substrate?.role === 'methyl-halide' &&
-    substrate?.leavingGroup === 'Br' &&
-    transformSet.has('form:C-CN') &&
-    transformSet.has('break:C-Br')
-  ) {
+  for (const rule of SN2_RULES) {
 
-    result.inferred = true;
-    result.mechanism = 'SN2';
+    const validSN2 =
+      nucleophile?.role === rule.nucleophile &&
+      substrate?.role === 'methyl-halide' &&
+      substrate?.leavingGroup === 'Br' &&
+      transformSet.has(rule.formTransform) &&
+      transformSet.has('break:C-Br');
 
-    result.products =
-      synthesizeSN2Products(
-        nucleophile,
-        substrate
-      );
-  }
+    if (validSN2) {
 
-  // ───────────────────────────────────────────────────────────────────────
-  // SN2: Hydroxide substitution
-  // ───────────────────────────────────────────────────────────────────────
+      result.inferred = true;
+      result.mechanism = 'SN2';
 
-  if (
-    nucleophile?.role === 'hydroxide' &&
-    substrate?.role === 'methyl-halide' &&
-    substrate?.leavingGroup === 'Br' &&
-    transformSet.has('form:C-OH') &&
-    transformSet.has('break:C-Br')
-  ) {
-
-    result.inferred = true;
-    result.mechanism = 'SN2';
-
-    result.products =
-      synthesizeSN2Products(
-        nucleophile,
-        substrate
-      );
+      result.products =
+        synthesizeSN2Products(
+          rule,
+          substrate
+        );
+    }
   }
 
   // ───────────────────────────────────────────────────────────────────────
