@@ -113,21 +113,21 @@ function buildLaneMap(ast) {
   return map;
 }
 
-function getOrderedAliases(step, laneMap) {
-  const aliases = Object.keys(step.species);
-  const persistSet = new Set(step.persist || []);
+function getOrderedAliases(entities, laneMap) {
 
-  const persistent = aliases
-    .filter(alias => persistSet.has(alias))
+  return entities
+    .slice()
     .sort((a, b) => {
-      const laneA = laneMap.get(step.species[a]) ?? 0;
-      const laneB = laneMap.get(step.species[b]) ?? 0;
+
+      const laneA =
+        laneMap[a.alias] ?? 0;
+
+      const laneB =
+        laneMap[b.alias] ?? 0;
+
       return laneA - laneB;
-    });
-
-  const novel = aliases.filter(alias => !persistSet.has(alias));
-
-  return [...persistent, ...novel];
+    })
+    .map(entity => entity.alias);
 }
 
 function buildRenderableStep(step) {
@@ -157,6 +157,36 @@ function buildRenderableStep(step) {
   });
 
   return renderedStep;
+}
+
+function buildRenderEntities(step) {
+
+  const entities = [];
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Explicit species → reactants
+  // ───────────────────────────────────────────────────────────────────────
+
+  for (
+    const [alias, molecule]
+    of Object.entries(step.species)
+  ) {
+
+    const inferred =
+      alias.startsWith('inferred_');
+
+    entities.push({
+      alias,
+      molecule,
+
+      role:
+        inferred
+          ? 'product'
+          : 'reactant'
+    });
+  }
+
+  return entities;
 }
 
 function computePositions(steps, horizontal, laneMap) {
@@ -593,10 +623,13 @@ const positions =
 
   renderableSteps.forEach((step, si) => {
     validateTransforms(step);
+    const entities =
+      buildRenderEntities(step);
+
     const aliases =
       getOrderedAliases(
-        step,
-        laneMap
+        entities,
+         laneMap
       );
 
     for (const alias of aliases) {
