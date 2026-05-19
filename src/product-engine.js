@@ -31,20 +31,81 @@ export function inferProducts(step) {
     }
   }
 
-  // ── SN2: Cyanide substitution ──────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────
+  // Semantic transform analysis
+  // ───────────────────────────────────────────────────────────────────────
+
+  let formsCCN = false;
+  let formsCOH = false;
+  let breaksCBr = false;
+
+  for (const transform of step.transforms || []) {
+
+    if (
+      transform.type === 'form'
+    ) {
+
+      const [a, b] =
+        transform.bond;
+
+      // form C-CN
+      if (
+        a === 'C' &&
+        b === 'CN'
+      ) {
+        formsCCN = true;
+      }
+
+      // form C-OH
+      if (
+        a === 'C' &&
+        b === 'OH'
+      ) {
+        formsCOH = true;
+      }
+    }
+
+    if (
+      transform.type === 'break'
+    ) {
+
+      const [a, b] =
+        transform.bond;
+
+      // break C-Br
+      if (
+        a === 'C' &&
+        b === 'Br'
+      ) {
+        breaksCBr = true;
+      }
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────────────────
+  // SN2: Cyanide substitution
+  // ───────────────────────────────────────────────────────────────────────
+
   if (
     nucleophile === 'CN-' &&
-    substrate === 'CH3-Br'
+    substrate === 'CH3-Br' &&
+    formsCCN &&
+    breaksCBr
   ) {
 
     inferred.push('CH3-CN');
     inferred.push('Br-');
   }
 
-  // ── SN2: Hydroxide substitution ───────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────
+  // SN2: Hydroxide substitution
+  // ───────────────────────────────────────────────────────────────────────
+
   if (
     nucleophile === 'OH-' &&
-    substrate === 'CH3-Br'
+    substrate === 'CH3-Br' &&
+    formsCOH &&
+    breaksCBr
   ) {
 
     inferred.push('CH3-OH');
