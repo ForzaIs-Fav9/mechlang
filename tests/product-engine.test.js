@@ -38,6 +38,12 @@ function runTests() {
       [],
       'Expected empty product inference fallback'
     );
+
+    assert.deepStrictEqual(
+      result.diagnostics,
+      [],
+      'Expected no diagnostics for empty inference state'
+    );
   }
 
   // ───────────────────────────────────────────────────────────────────────
@@ -89,6 +95,12 @@ function runTests() {
         'Br-'
       ],
       'Expected cyanide substitution products'
+    );
+
+    assert.deepStrictEqual(
+      result.diagnostics,
+      [],
+      'Expected no diagnostics for valid inference'
     );
   }
 
@@ -142,6 +154,12 @@ function runTests() {
       ],
       'Expected hydroxide substitution products'
     );
+
+    assert.deepStrictEqual(
+      result.diagnostics,
+      [],
+      'Expected no diagnostics for valid inference'
+    );
   }
 
   // ───────────────────────────────────────────────────────────────────────
@@ -187,6 +205,14 @@ function runTests() {
       [],
       'Unsupported transforms should return empty products'
     );
+
+    assert.deepStrictEqual(
+      result.diagnostics,
+      [
+        'Unable to infer products for transform sequence.'
+      ],
+      'Expected unsupported transform diagnostic'
+    );
   }
 
   // ───────────────────────────────────────────────────────────────────────
@@ -220,6 +246,12 @@ function runTests() {
       result.products,
       [],
       'Species-only inference should produce no products'
+    );
+
+    assert.deepStrictEqual(
+      result.diagnostics,
+      [],
+      'Species-only state should not produce diagnostics'
     );
   }
 
