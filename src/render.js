@@ -933,21 +933,13 @@ function render(ast, horizontal) {
         if (
           arrow.inferenceType === 'leaving'
         ) {
-          const dx = 
-            toRef.x - fromRef.x;
-          const dy = 
-            toRef.y - fromRef.y;
-          const len = 
-            Math.sqrt(
-              dx * dx + 
-              dy * dy
-            ) || 1;
-          targetX = fromRef.x + 
-            (dx / len) * 70;
-          targetY = fromRef.y +
-            (dy / len) * 70;
-        }
 
+          targetX =
+            toRef.x;
+
+          targetY =
+            toRef.y;
+        }
         body += renderArrow(
           fromRef.x,
           fromRef.y,
