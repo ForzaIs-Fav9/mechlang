@@ -18,11 +18,23 @@ function runTests() {
       persist: []
     };
 
-    const products =
+    const result =
       inferProducts(step);
 
+    assert.strictEqual(
+      result.inferred,
+      false,
+      'Expected inference flag to remain false'
+    );
+
+    assert.strictEqual(
+      result.mechanism,
+      null,
+      'Expected null mechanism for empty inference'
+    );
+
     assert.deepStrictEqual(
-      products,
+      result.products,
       [],
       'Expected empty product inference fallback'
     );
@@ -55,11 +67,23 @@ function runTests() {
       persist: []
     };
 
-    const products =
+    const result =
       inferProducts(step);
 
+    assert.strictEqual(
+      result.inferred,
+      true,
+      'Expected SN2 cyanide substitution inference'
+    );
+
+    assert.strictEqual(
+      result.mechanism,
+      'SN2',
+      'Expected SN2 mechanism classification'
+    );
+
     assert.deepStrictEqual(
-      products,
+      result.products,
       [
         'CH3-CN',
         'Br-'
@@ -95,11 +119,23 @@ function runTests() {
       persist: []
     };
 
-    const products =
+    const result =
       inferProducts(step);
 
+    assert.strictEqual(
+      result.inferred,
+      true,
+      'Expected hydroxide substitution inference'
+    );
+
+    assert.strictEqual(
+      result.mechanism,
+      'SN2',
+      'Expected SN2 mechanism classification'
+    );
+
     assert.deepStrictEqual(
-      products,
+      result.products,
       [
         'CH3-OH',
         'Br-'
@@ -131,13 +167,25 @@ function runTests() {
       persist: []
     };
 
-    const products =
+    const result =
       inferProducts(step);
 
-    assert.deepStrictEqual(
-      products,
-      [],
+    assert.strictEqual(
+      result.inferred,
+      false,
       'Unsupported transforms should not infer products'
+    );
+
+    assert.strictEqual(
+      result.mechanism,
+      null,
+      'Unsupported transforms should not classify mechanisms'
+    );
+
+    assert.deepStrictEqual(
+      result.products,
+      [],
+      'Unsupported transforms should return empty products'
     );
   }
 
@@ -159,13 +207,19 @@ function runTests() {
       persist: []
     };
 
-    const products =
+    const result =
       inferProducts(step);
 
-    assert.deepStrictEqual(
-      products,
-      [],
+    assert.strictEqual(
+      result.inferred,
+      false,
       'Species presence alone should not infer products'
+    );
+
+    assert.deepStrictEqual(
+      result.products,
+      [],
+      'Species-only inference should produce no products'
     );
   }
 
