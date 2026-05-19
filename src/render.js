@@ -675,22 +675,48 @@ function resolveAnchor(
   const ref =
     parseArrowRef(refString);
 
+  // Ignore inferred products
+  if (
+    ref.alias.startsWith(
+      'inferred_'
+    )
+  ) {
+    return null;
+  }
+
   const mol =
-    resolveMol(ref.alias, step);
+    resolveMol(
+      ref.alias,
+      step
+    );
 
   const atom =
-    getAtomPos(mol, ref, role);
+    getAtomPos(
+      mol,
+      ref,
+      role
+    );
 
   const origin =
-    stepPos[ref.alias];
+    stepPos[
+      ref.alias
+    ];
 
-  if (!origin) {
+  if (
+    !origin
+  ) {
     return null;
   }
 
   return {
-    x: origin.x + atom.x,
-    y: origin.y + atom.y
+
+    x:
+      origin.x +
+      atom.x,
+
+    y:
+      origin.y +
+      atom.y
   };
 }
 
