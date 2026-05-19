@@ -224,6 +224,14 @@ function computePositions(
 
     const stepPos = {};
 
+    const reactionCenterX =
+      STEP_X_ORIGIN +
+      si * STEP_X_GAP;
+
+    const reactionCenterY =
+      STEP_Y_ORIGIN +
+      si * STEP_Y_GAP;
+
     // ───────────────────────────────────────────────────────────────────
     // Reactants
     // ───────────────────────────────────────────────────────────────────
@@ -235,9 +243,7 @@ function computePositions(
 
         stepPos[alias] = {
 
-          x:
-            STEP_X_ORIGIN +
-            si * STEP_X_GAP,
+          x: reactionCenterX,
 
           y:
             STEP_Y_ORIGIN +
@@ -249,12 +255,11 @@ function computePositions(
         stepPos[alias] = {
 
           x:
-            STEP_X_ORIGIN +
-            i * MOLECULE_X_GAP,
+            reactionCenterX -
+            160 +
+            i * 120,
 
-          y:
-            STEP_Y_ORIGIN +
-            si * STEP_Y_GAP
+          y: reactionCenterY
         };
       }
     });
@@ -270,13 +275,11 @@ function computePositions(
 
         stepPos[alias] = {
 
-          x:
-            STEP_X_ORIGIN +
-            si * STEP_X_GAP,
+          x: reactionCenterX,
 
           y:
             STEP_Y_ORIGIN +
-            (reactants.length + 2 + i)
+            (reactants.length + 3 + i)
             * MOLECULE_Y_GAP
         };
 
@@ -285,13 +288,11 @@ function computePositions(
         stepPos[alias] = {
 
           x:
-            STEP_X_ORIGIN +
-            (reactants.length + 2 + i)
-            * MOLECULE_X_GAP,
+            reactionCenterX +
+            260 +
+            i * 140,
 
-          y:
-            STEP_Y_ORIGIN +
-            si * STEP_Y_GAP
+          y: reactionCenterY
         };
       }
     });
