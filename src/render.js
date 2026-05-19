@@ -824,11 +824,24 @@ function render(ast, horizontal) {
 
         if (!fromRef || !toRef) return;
 
+        let targetX = toRef.x;
+        let targetY = toRef.y;
+
+        if (
+          arrow.inferenceType === 'leaving'
+        ) {
+          targetX =
+            fromRef.x + 60;
+
+          targetY =
+            fromRef.y + 30;
+        }
+
         body += renderArrow(
           fromRef.x,
           fromRef.y,
-          toRef.x,
-          toRef.y,
+          targetX,
+          targetY,
           ai
         );
       }
