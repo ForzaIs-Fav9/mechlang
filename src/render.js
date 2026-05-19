@@ -830,11 +830,19 @@ function render(ast, horizontal) {
         if (
           arrow.inferenceType === 'leaving'
         ) {
-          targetX =
-            fromRef.x + 60;
-
-          targetY =
-            fromRef.y + 30;
+          const dx = 
+            toRef.x - fromRef.x;
+          const dy = 
+            toRef.y - fromRef.y;
+          const len = 
+            Math.sqrt(
+              dx * dx + 
+              dy * dy
+            ) || 1;
+          targetX = fromRef.x + 
+            (dx / len) * 70;
+          targetY = fromRef.y +
+            (dy / len) * 70;
         }
 
         body += renderArrow(
