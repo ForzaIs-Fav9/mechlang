@@ -799,8 +799,9 @@ function renderArrow(
       x2,
       y2
     );
-
-  const path =
+  
+  let path;
+  path =
     arrowPath(
       x1,
       y1,
