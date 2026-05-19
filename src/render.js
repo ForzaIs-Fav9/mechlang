@@ -879,10 +879,32 @@ function render(ast, horizontal) {
       );
     }
 
+    const semanticStep = {
+
+      ...step,
+
+      species:
+        Object.fromEntries(
+
+          Object.entries(
+            step.species
+          ).filter(
+
+            ([alias]) =>
+              !alias.startsWith(
+                'inferred_'
+              )
+
+          )
+        )
+    };
+
     const effectiveArrows =
       step.arrows.length > 0
         ? step.arrows
-        : inferArrowsFromTransforms(step);
+        : inferArrowsFromTransforms(
+            semanticStep
+          );
 
     effectiveArrows.forEach(
       (arrow, ai) => {
@@ -891,7 +913,7 @@ function render(ast, horizontal) {
           resolveAnchor(
             arrow.from,
             positions[si],
-            step,
+            semanticStep,
             'from'
           );
 
@@ -899,7 +921,7 @@ function render(ast, horizontal) {
           resolveAnchor(
             arrow.to,
             positions[si],
-            step,
+            semanticStep,
             'to'
           );
 
