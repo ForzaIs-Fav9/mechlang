@@ -159,8 +159,8 @@ function buildRenderableStep(step) {
   return renderedStep;
 }
 
-function computePositions(ast, horizontal, laneMap) {
-  return ast.steps.map((step, si) => {
+function computePositions(steps, horizontal, laneMap) {
+  return steps.map((step, si) => {
 
     const stepPos = {};
     const aliases = getOrderedAliases(step, laneMap);
@@ -553,16 +553,21 @@ function render(ast, horizontal) {
 
   LABEL_BOXES = [];
 
-  const laneMap =
-    buildLaneMap(ast);
+  const renderableSteps =
+  ast.steps.map(buildRenderableStep);
 
-  const positions =
-    computePositions(
-      ast,
-      horizontal,
-      laneMap
-    );
+const laneMap =
+  buildLaneMap({
+    steps: renderableSteps
+  });
 
+const positions =
+  computePositions(
+    renderableSteps,
+    layoutHorizontal,
+    laneMap
+  );
+  
   const { width, height } =
     computeCanvas(positions);
 
@@ -586,10 +591,7 @@ function render(ast, horizontal) {
     </defs>
   `;
 
-  ast.steps.forEach((rawStep, si) => {
-
-    const step =
-      buildRenderableStep(rawStep);
+  renderableSteps.forEach((step, si) => {
     validateTransforms(step);
     const aliases =
       getOrderedAliases(
