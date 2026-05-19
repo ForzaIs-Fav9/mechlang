@@ -961,46 +961,6 @@ function render(ast, horizontal) {
           const ny =
             dx / len;
 
-          // move both anchors off bond axis
-
-          targetX =
-            toRef.x +
-            nx * 18;
-
-          targetY =
-            toRef.y +
-            ny * 18;
-        } 
-        
-        let path;
-
-        if (
-          arrow.inferenceType === 'leaving'
-        ) {
-
-          const dx =
-            targetX - fromRef.x;
-
-          const dy =
-            targetY - fromRef.y;
-
-          const len =
-            Math.sqrt(
-              dx * dx +
-              dy * dy
-            ) || 1;
-
-          // perpendicular vector
-
-          const nx =
-            -dy / len;
-
-          const ny =
-            dx / len;
-
-          // control point pushed away
-          // from bond axis
-
           const startX =
             fromRef.x +
             nx * 4;
@@ -1008,16 +968,27 @@ function render(ast, horizontal) {
           const startY =
             fromRef.y +
             ny * 4;
-          
-          const endX = 
-            toRef.x;
-          
-          const endY = 
-            toRef.y;
+
+          const endX =
+            toRef.x +
+            nx * 18;
+
+          const endY =
+            toRef.y +
+            ny * 18;
+
+          const cx =
+            (startX + endX) / 2 +
+            nx * 10;
+
+          const cy =
+            (startY + endY) / 2 +
+            ny * 10;
 
           path = `
             M ${startX} ${startY}
-             L ${endX} ${endY}
+            Q ${cx} ${cy}
+            ${endX} ${endY}
           `;
 
         } else {
@@ -1031,7 +1002,6 @@ function render(ast, horizontal) {
               ai
             );
         }
-
         body += `
           <path
             d="${path}"
