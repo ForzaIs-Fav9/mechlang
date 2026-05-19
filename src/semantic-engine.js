@@ -5,6 +5,7 @@ export function validateTransforms(step) {
   for (const transform of step.transforms || []) {
 
     // ── form C-CN ────────────────────────────────────────
+
     if (
       transform.type === 'form' &&
       transform.bond[0] === 'C' &&
@@ -23,35 +24,47 @@ export function validateTransforms(step) {
       }
     }
 
-    // ── break C-X ────────────────────────────────────────
+    // ── break bond validation ────────────────────────────
+
     if (
       transform.type === 'break'
     ) {
 
-      const [a, b] =
+      const [a,b] =
         transform.bond;
 
-      let found = false;
+      let found =
+        false;
 
-      for (const molKey of Object.values(step.species)) {
+      for (
+        const molKey
+        of Object.values(step.species)
+      ) {
 
         const mol =
           moleculeRegistry[molKey];
 
         if (!mol) continue;
 
-        for (const bond of mol.bonds || []) {
+        for (
+          const bond
+          of (mol.bonds || [])
+        ) {
 
-          const [x, y] = bond;
+          const [x,y] =
+            bond;
 
           const direct =
-            x === a && y === b;
+            x===a && y===b;
 
           const reverse =
-            x === b && y === a;
+            x===b && y===a;
 
-          if (direct || reverse) {
-            found = true;
+          if (
+            direct ||
+            reverse
+          ) {
+            found=true;
           }
         }
       }
@@ -66,48 +79,58 @@ export function validateTransforms(step) {
   }
 }
 
-export function inferArrowsFromTransforms(step) {
+export function inferArrowsFromTransforms(
+  step
+) {
 
-  const inferred = [];
+  const inferred=[];
 
-  for (const transform of step.transforms || []) {
+  for (
+    const transform
+    of (step.transforms||[])
+  ) {
 
-    // ── FORM inference ──────────────────────────────────
+    // ─────────────────────────────────────
+    // FORM
+    // ─────────────────────────────────────
 
-    if (transform.type === 'form') {
+    if (
+      transform.type==='form'
+    ) {
 
-      const [a, b] =
+      const [a,b]=
         transform.bond;
 
       if (
-        a === 'C' &&
-        b === 'CN'
+        a==='C' &&
+        b==='CN'
       ) {
 
-        let nucRole = null;
-        let subRole = null;
+        let nucRole=null;
+        let subRole=null;
 
         for (
-          const [role, molKey]
-          of Object.entries(step.species)
+          const [role,molKey]
+          of Object.entries(
+            step.species
+          )
         ) {
 
-          // nucleophile
-
           if (
-            molKey === 'CN-'
+            molKey==='CN-'
           ) {
-            nucRole = role;
+            nucRole=role;
           }
 
-          // substrate
-
           if (
+
             molKey.includes('Br') ||
             molKey.includes('Cl') ||
             molKey.includes('I')
+
           ) {
-            subRole = role;
+
+            subRole=role;
           }
         }
 
@@ -117,68 +140,97 @@ export function inferArrowsFromTransforms(step) {
         ) {
 
           const leavingAtom =
-            step.species[subRole].includes('Br')
-              ? 'Br'
-              : step.species[subRole].includes('Cl')
-                ? 'Cl'
-                : 'I';
+
+            step.species[
+              subRole
+            ].includes('Br')
+
+            ? 'Br'
+
+            :
+
+            step.species[
+              subRole
+            ].includes('Cl')
+
+            ? 'Cl'
+
+            : 'I';
 
           inferred.push({
 
-            curved: true,
-            inferred: true,
-            inferenceType: 'attack',
+            curved:true,
+            inferred:true,
+
+            inferenceType:
+              'attack',
 
             from:
               `${nucRole}.C`,
 
             to:
               `${subRole}.C-${leavingAtom}`
+
           });
         }
       }
     }
 
-    // ── BREAK inference ─────────────────────────────────
+    // ─────────────────────────────────────
+    // BREAK
+    // ─────────────────────────────────────
 
     if (
-      transform.type === 'break'
+      transform.type==='break'
     ) {
 
-      const [a, b] =
+      const [a,b]=
         transform.bond;
 
       if (
-        a === 'C' &&
-        ['Br', 'Cl', 'I']
-          .includes(b)
+
+        a==='C' &&
+        ['Br','Cl','I']
+        .includes(b)
+
       ) {
 
-        let subRole = null;
+        let subRole=null;
 
         for (
-          const [role, molKey]
-          of Object.entries(step.species)
+          const [role,molKey]
+          of Object.entries(
+            step.species
+          )
         ) {
 
           if (
 
-            molKey.includes(b) &&
-            molKey.includes('CH3')
+            molKey.includes(
+              b
+            ) &&
+
+            molKey.includes(
+              'CH3'
+            )
 
           ) {
 
-            subRole = role;
+            subRole=role;
           }
         }
 
-        if (subRole) {
+        if (
+          subRole
+        ) {
 
           inferred.push({
 
-            curved: true,
-            inferred: true,
-            inferenceType: 'leaving',
+            curved:true,
+            inferred:true,
+
+            inferenceType:
+              'leaving',
 
             from:
               `${subRole}.C-${b}`,
@@ -186,7 +238,8 @@ export function inferArrowsFromTransforms(step) {
             to:
               `${subRole}.${b}`,
 
-            local: true
+            local:true
+
           });
         }
       }
