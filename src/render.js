@@ -943,11 +943,32 @@ function render(ast, horizontal) {
           arrow.inferenceType === 'leaving'
         ) {
 
+          const dx =
+            toRef.x - fromRef.x;
+
+          const dy =
+            toRef.y - fromRef.y;
+
+          const len =
+            Math.sqrt(
+              dx * dx +
+              dy * dy
+            ) || 1;
+
+          // perpendicular vector
+          const nx =
+            -dy / len;
+
+          const ny =
+            dx / len;
+
           targetX =
-            toRef.x;
+            toRef.x +
+            nx * 25;
 
           targetY =
-            toRef.y;
+            toRef.y +
+            ny * 25;
         } 
         
         body += renderArrow(
