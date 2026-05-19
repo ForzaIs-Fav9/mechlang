@@ -7,6 +7,10 @@ import {
   inferArrowsFromTransforms
 } from './semantic-engine.js';
 
+import {
+  inferProducts
+} from './product-engine.js';
+
 const STEP_Y_GAP = 240;
 const STEP_X_GAP = 260;
 const MOLECULE_X_GAP = 180;
@@ -124,6 +128,35 @@ function getOrderedAliases(step, laneMap) {
   const novel = aliases.filter(alias => !persistSet.has(alias));
 
   return [...persistent, ...novel];
+}
+
+function buildRenderableStep(step) {
+
+  const renderedStep = {
+    ...step,
+    species: {
+      ...step.species
+    }
+  };
+
+  const inference =
+    inferProducts(step);
+
+  if (!inference.inferred) {
+    return renderedStep;
+  }
+
+  inference.products.forEach(
+    (product, index) => {
+
+    const alias =
+      `inferred_${index}`;
+
+    renderedStep.species[alias] =
+      product;
+  });
+
+  return renderedStep;
 }
 
 function computePositions(ast, horizontal, laneMap) {
@@ -553,7 +586,10 @@ function render(ast, horizontal) {
     </defs>
   `;
 
-  ast.steps.forEach((step, si) => {
+  ast.steps.forEach((rawStep, si) => {
+
+    const step =
+      buildRenderableStep(rawStep);
     validateTransforms(step);
     const aliases =
       getOrderedAliases(
