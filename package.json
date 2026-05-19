@@ -3,7 +3,7 @@
   "version": "0.15.0",
   "type": "module",
   "scripts": {
-    "render": "node src/render.js"
+    "render": "node src/render.js",
     "test": "node tests/semantic-engine.test.js && node tests/product-engine.test.js"
   }
 }
