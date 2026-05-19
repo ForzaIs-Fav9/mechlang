@@ -3,7 +3,8 @@ export function inferProducts(step) {
   const result = {
     inferred: false,
     mechanism: null,
-    products: []
+    products: [],
+    diagnostics: []
   };
 
   const species =
@@ -123,6 +124,23 @@ export function inferProducts(step) {
     result.products.push(
       'CH3-OH',
       'Br-'
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Semantic diagnostics
+  // ───────────────────────────────────────────────────────────────────────
+
+  const hasTransforms =
+    (step.transforms || []).length > 0;
+
+  if (
+    hasTransforms &&
+    !result.inferred
+  ) {
+
+    result.diagnostics.push(
+      'Unable to infer products for transform sequence.'
     );
   }
 
