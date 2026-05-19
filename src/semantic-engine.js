@@ -4,7 +4,7 @@ export function validateTransforms(step) {
 
   for (const transform of step.transforms || []) {
 
-    // ── form C-CN ────────────────────────────────────────────────────────
+    // ── form C-CN ────────────────────────────────────────
     if (
       transform.type === 'form' &&
       transform.bond[0] === 'C' &&
@@ -23,7 +23,7 @@ export function validateTransforms(step) {
       }
     }
 
-    // ── break C-X ────────────────────────────────────────────────────────
+    // ── break C-X ────────────────────────────────────────
     if (
       transform.type === 'break'
     ) {
@@ -72,27 +72,36 @@ export function inferArrowsFromTransforms(step) {
 
   for (const transform of step.transforms || []) {
 
-    // ── FORM bond inference ───────────────────────────────────────────────
+    // ── FORM inference ──────────────────────────────────
+
     if (transform.type === 'form') {
 
-      const [a, b] = transform.bond;
+      const [a, b] =
+        transform.bond;
 
-      // SN2 heuristic:
-      // form C-CN
-
-      if (a === 'C' && b === 'CN') {
+      if (
+        a === 'C' &&
+        b === 'CN'
+      ) {
 
         let nucRole = null;
         let subRole = null;
 
-        for (const [role, molKey] of Object.entries(step.species)) {
+        for (
+          const [role, molKey]
+          of Object.entries(step.species)
+        ) {
 
           // nucleophile
-          if (molKey === 'CN-') {
+
+          if (
+            molKey === 'CN-'
+          ) {
             nucRole = role;
           }
 
-          // electrophile
+          // substrate
+
           if (
             molKey.includes('Br') ||
             molKey.includes('Cl') ||
@@ -102,7 +111,10 @@ export function inferArrowsFromTransforms(step) {
           }
         }
 
-        if (nucRole && subRole) {
+        if (
+          nucRole &&
+          subRole
+        ) {
 
           const leavingAtom =
             step.species[subRole].includes('Br')
@@ -112,36 +124,50 @@ export function inferArrowsFromTransforms(step) {
                 : 'I';
 
           inferred.push({
+
             curved: true,
             inferred: true,
-            inferenceType: 'leaving',
-            from: `${subRole}.C-${b}`,
-            to: `${subRole}.${b}`,
-            local: true
+            inferenceType: 'attack',
+
+            from:
+              `${nucRole}.C`,
+
+            to:
+              `${subRole}.C-${leavingAtom}`
           });
         }
       }
     }
 
-    // ── BREAK bond inference ──────────────────────────────────────────────
-    if (transform.type === 'break') {
+    // ── BREAK inference ─────────────────────────────────
 
-      const [a, b] = transform.bond;
+    if (
+      transform.type === 'break'
+    ) {
 
-      // Leaving-group heuristic
+      const [a, b] =
+        transform.bond;
+
       if (
         a === 'C' &&
-        ['Br', 'Cl', 'I'].includes(b)
+        ['Br', 'Cl', 'I']
+          .includes(b)
       ) {
 
         let subRole = null;
 
-        for (const [role, molKey] of Object.entries(step.species)) {
+        for (
+          const [role, molKey]
+          of Object.entries(step.species)
+        ) {
 
           if (
+
             molKey.includes(b) &&
             molKey.includes('CH3')
+
           ) {
+
             subRole = role;
           }
         }
@@ -149,11 +175,18 @@ export function inferArrowsFromTransforms(step) {
         if (subRole) {
 
           inferred.push({
+
             curved: true,
             inferred: true,
             inferenceType: 'leaving',
-            from: `${subRole}.C-${b}`,
-            to:   `${subRole}.${b}`
+
+            from:
+              `${subRole}.C-${b}`,
+
+            to:
+              `${subRole}.${b}`,
+
+            local: true
           });
         }
       }
