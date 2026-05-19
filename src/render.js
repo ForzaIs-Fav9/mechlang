@@ -189,31 +189,56 @@ function buildRenderEntities(step) {
   return entities;
 }
 
-function computePositions(steps, horizontal, laneMap) {
+function computePositions(
+  steps,
+  horizontal,
+  laneMap
+) {
+
   return steps.map((step, si) => {
 
-    const stepPos = {};
-    const aliases = getOrderedAliases(step, laneMap);
+    const entities =
+      buildRenderEntities(step);
 
-    aliases.forEach((alias, localIndex) => {
+    const aliases =
+      getOrderedAliases(
+        entities,
+        laneMap
+      );
+
+    const rowY =
+      TOP_MARGIN +
+      si * STEP_VERTICAL_SPACING;
+
+    const colX =
+      LEFT_MARGIN +
+      si * STEP_HORIZONTAL_SPACING;
+
+    const positions = {};
+
+    aliases.forEach((alias, i) => {
 
       if (horizontal) {
 
-        stepPos[alias] = {
-          x: STEP_X_ORIGIN + si * STEP_X_GAP,
-          y: STEP_Y_ORIGIN + localIndex * MOLECULE_Y_GAP
+        positions[alias] = {
+          x: colX,
+          y:
+            TOP_MARGIN +
+            i * MOLECULE_VERTICAL_SPACING
         };
 
       } else {
 
-        stepPos[alias] = {
-          x: STEP_X_ORIGIN + localIndex * MOLECULE_X_GAP,
-          y: STEP_Y_ORIGIN + si * STEP_Y_GAP
+        positions[alias] = {
+          x:
+            LEFT_MARGIN +
+            i * MOLECULE_HORIZONTAL_SPACING,
+          y: rowY
         };
       }
     });
 
-    return stepPos;
+    return positions;
   });
 }
 
@@ -622,123 +647,65 @@ const positions =
   `;
 
   renderableSteps.forEach((step, si) => {
-    validateTransforms(step);
-    const entities =
-      buildRenderEntities(step);
 
-    const aliases =
-      getOrderedAliases(
-        entities,
-         laneMap
-      );
+  validateTransforms(step);
 
-    for (const alias of aliases) {
+  const entities =
+    buildRenderEntities(step);
 
-      const p =
-        positions[si][alias];
+  const aliases =
+    getOrderedAliases(
+      entities,
+      laneMap
+    );
 
-      body += renderMolecule(
-        alias,
-        step,
-        p.x,
-        p.y
-      );
-    }
+  for (const alias of aliases) {
 
-    const effectiveArrows =
-      step.arrows.length > 0
-        ? step.arrows
-        : inferArrowsFromTransforms(step);
+    const p =
+      positions[si][alias];
 
-    effectiveArrows.forEach(
-      (arrow, ai) => {
+    body += renderMolecule(
+      alias,
+      step,
+      p.x,
+      p.y
+    );
+  }
+
+  const effectiveArrows =
+    step.arrows.length > 0
+      ? step.arrows
+      : inferArrowsFromTransforms(step);
+
+  effectiveArrows.forEach(
+    (arrow, ai) => {
 
       const fromRef =
-        parseArrowRef(
-          arrow.from ?? ''
+        resolveAnchor(
+          arrow.from,
+          positions[si],
+          step
         );
 
       const toRef =
-        parseArrowRef(
-          arrow.to ?? ''
+        resolveAnchor(
+          arrow.to,
+          positions[si],
+          step
         );
 
-      const p1 =
-        positions[si][fromRef.alias];
+      if (!fromRef || !toRef) return;
 
-      const p2 =
-        positions[si][toRef.alias];
-
-      if (!p1 || !p2) return;
-
-      const a1 = getAtomPos(
-        resolveMol(
-          fromRef.alias,
-          step
-        ),
-        fromRef,
-        'from'
+      body += renderArrow(
+        fromRef.x,
+        fromRef.y,
+        toRef.x,
+        toRef.y,
+        ai
       );
-
-      const a2 = getAtomPos(
-        resolveMol(
-          toRef.alias,
-          step
-        ),
-        toRef,
-        'to'
-      );
-
-      const startX =
-        p1.x + a1.x;
-
-      const startY =
-        p1.y + a1.y;
-
-      const rawEndX =
-        p2.x + a2.x;
-
-      const rawEndY =
-        p2.y + a2.y;
-
-      const shortenDistance =
-        arrow.inferenceType === 'leaving'
-          ? 4
-          : 12;
-
-      const adjustedEnd =
-        offsetEndpoint(
-          startX,
-          startY,
-          rawEndX,
-          rawEndY,
-          shortenDistance
-        );
-
-      const arrowIndex =
-        arrow.inferenceType === 'leaving'
-          ? ai + 2
-          : ai;
-
-      const d = arrowPath(
-        startX,
-        startY,
-        adjustedEnd.x,
-        adjustedEnd.y,
-        arrowIndex
-      );
-
-      body += `
-        <path
-          d="${d}"
-          stroke="black"
-          fill="none"
-          stroke-width="1.2"
-          marker-end="url(#arrowhead)"
-        />
-      `;
-    });
-  });
+    }
+  );
+});
 
   return `
     <svg
