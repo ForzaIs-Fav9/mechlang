@@ -114,9 +114,10 @@ export function inferArrowsFromTransforms(step) {
           inferred.push({
             curved: true,
             inferred: true,
-            inferenceType: 'attack',
-            from: `${nucRole}.C`,
-            to:   `${subRole}.C-${leavingAtom}`
+            inferenceType: 'leaving',
+            from: `${subRole}.C-${b}`,
+            to: `${subRole}.${b}`,
+            local: true
           });
         }
       }
