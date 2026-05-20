@@ -46,10 +46,12 @@ parse.js
   ↓
 semantic-engine.js
   ↓
+product-engine.js
+  ↓
 render.js
 ```
 
-This separation allows chemistry semantics, validation, and rendering to evolve independently.
+This separation allows chemistry semantics, validation, product inference, and rendering to evolve independently.
 
 ---
 
@@ -64,16 +66,19 @@ parse.js
     ↓
 semantic-engine.js
     ↓
+product-engine.js
+    ↓
 render.js
     ↓
 out/*.svg
 ```
 
 * `parse.js` handles syntax only
-* `semantic-engine.js` handles chemistry reasoning and inference
+* `semantic-engine.js` handles chemistry reasoning and arrow inference
+* `product-engine.js` handles heuristic product inference
 * `render.js` handles visualization only
 
-The renderer is driven entirely by the AST and semantic engine, not by hardcoded geometry.
+The renderer is driven entirely by the AST, the semantic engine, and inferred products — not by hardcoded geometry.
 
 ---
 
@@ -97,7 +102,7 @@ step {
 
 ## Semantic Transform Blocks (v0.14)
 
-MechLang now supports semantic bond operations independent from rendering:
+MechLang supports semantic bond operations independent from rendering:
 
 ```mech
 step {
@@ -119,7 +124,7 @@ Current supported operations:
 * `form A-B`
 * `break A-B`
 
-Transforms are currently parser-level semantics and may later compile into automatic curved-arrow generation.
+Transforms are parsed into structured AST operations independent from rendering and can be validated and interpreted by the semantic engine.
 
 ---
 
@@ -147,9 +152,39 @@ Explicit arrows remain fully supported.
 
 ---
 
+## Heuristic Product Inference (v0.15)
+
+MechLang now infers products for supported reaction patterns, starting with SN2-style substitution.
+
+Example:
+
+```mech
+step {
+  species:
+    nuc = CN-
+    sub = CH3-Br
+
+  transform {
+    form C-CN
+    break C-Br
+  }
+}
+```
+
+can automatically render as:
+
+* `CH3-CN`
+* `Br-`
+
+without explicit product declarations.
+
+This is heuristic rather than full graph rewriting. It is intended as the first step toward reaction-state synthesis.
+
+---
+
 ## Semantic Diagnostics
 
-MechLang now includes compiler-style semantic validation warnings.
+MechLang includes compiler-style semantic validation warnings.
 
 Examples:
 
@@ -173,6 +208,8 @@ mechlang is still an early-stage prototype focused on semantic architecture.
 * curved-arrow electron flow
 * semantic transform blocks
 * automatic arrow inference
+* heuristic product inference
+* inferred product rendering
 * semantic diagnostics
 * species persistence
 * SVG output
@@ -180,11 +217,13 @@ mechlang is still an early-stage prototype focused on semantic architecture.
 * double-bond rendering
 * charges
 * semantic engine tests
+* product engine tests
+* product separation and leaving-group rendering
 
 ### Not yet supported
 
 * full molecular graph rewriting
-* automatic product synthesis
+* transition-state visualization
 * stereochemistry
 * aromaticity
 * rings
@@ -217,17 +256,14 @@ Each `step {}` defines a self-contained semantic context:
 ### Syntax
 
 ```mech
-step {
-  species:
-    nucleophile = CN-
-    electrophile = CH3-Br
+step:
+species:
+sub = CH3-Br
+nuc = CN-
 
-  arrow(
-    curved,
-    from = nucleophile.C,
-    to   = electrophile.C-Br
-  )
-}
+transform:
+form C-CN
+break C-Br
 ```
 
 Semantic Rules:
@@ -257,6 +293,12 @@ Run semantic-engine tests:
 
 ```bash
 node tests/semantic-engine.test.js
+```
+
+Run product-engine tests:
+
+```bash
+node tests/product-engine.test.js
 ```
 
 Render example mechanisms:

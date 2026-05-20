@@ -7,6 +7,10 @@ import {
   inferArrowsFromTransforms
 } from './semantic-engine.js';
 
+import {
+  inferProducts
+} from './product-engine.js';
+
 const STEP_Y_GAP = 240;
 const STEP_X_GAP = 260;
 const MOLECULE_X_GAP = 180;
@@ -64,34 +68,88 @@ function parseArrowRef(ref) {
   };
 }
 
-function getAtomPos(mol, ref, role = 'to') {
-  if (!mol) {
-    return { x: 0, y: 0 };
+function getAtomPos(
+  mol,
+  ref,
+  role='to'
+){
+
+  if(!mol){
+
+    return{
+      x:0,
+      y:0
+    };
   }
 
-  if (
+  // Bond reference
+
+  if(
+
     ref.atomB &&
     mol.atoms[ref.atomLabel] &&
     mol.atoms[ref.atomB]
-  ) {
-    const a = mol.atoms[ref.atomLabel];
-    const b = mol.atoms[ref.atomB];
 
-    if (role === 'from') {
-      return {
-        x: (a.x + b.x) / 2,
-        y: (a.y + b.y) / 2
-      };
+  ){
+
+    const a=
+      mol.atoms[
+        ref.atomLabel
+      ];
+
+    const b=
+      mol.atoms[
+        ref.atomB
+      ];
+
+    const midpoint={
+
+      x:
+        (a.x+b.x)/2,
+
+      y:
+        (a.y+b.y)/2
+    };
+
+    // leaving-group arrow originates
+    // from bond midpoint
+
+    if(
+      role==='from'
+    ){
+      return midpoint;
     }
 
-    return a;
+    // attack arrow also targets
+    // bond midpoint
+
+    return midpoint;
   }
 
-  if (ref.atomLabel && mol.atoms[ref.atomLabel]) {
-    return mol.atoms[ref.atomLabel];
+  if(
+
+    ref.atomLabel &&
+    mol.atoms[
+      ref.atomLabel
+    ]
+
+  ){
+
+    return mol.atoms[
+      ref.atomLabel
+    ];
   }
 
-  return Object.values(mol.atoms)[0] ?? { x: 0, y: 0 };
+  return(
+    Object.values(
+      mol.atoms
+    )[0]
+    ??
+    {
+      x:0,
+      y:0
+    }
+  );
 }
 
 function buildLaneMap(ast) {
@@ -109,51 +167,206 @@ function buildLaneMap(ast) {
   return map;
 }
 
-function getOrderedAliases(step, laneMap) {
-  const aliases = Object.keys(step.species);
-  const persistSet = new Set(step.persist || []);
+function getOrderedAliases(
+  entities,
+  laneMap
+) {
 
-  const persistent = aliases
-    .filter(alias => persistSet.has(alias))
+  return entities
+    .slice()
     .sort((a, b) => {
-      const laneA = laneMap.get(step.species[a]) ?? 0;
-      const laneB = laneMap.get(step.species[b]) ?? 0;
+
+      const laneA =
+        laneMap.get(a.molecule) ?? 0;
+
+      const laneB =
+        laneMap.get(b.molecule) ?? 0;
+
       return laneA - laneB;
-    });
-
-  const novel = aliases.filter(alias => !persistSet.has(alias));
-
-  return [...persistent, ...novel];
+    })
+    .map(entity => entity.alias);
 }
 
-function computePositions(ast, horizontal, laneMap) {
-  return ast.steps.map((step, si) => {
+function buildRenderableStep(step) {
+
+  const renderedStep = {
+    ...step,
+    species: {
+      ...step.species
+    }
+  };
+
+  const inference =
+    inferProducts(step);
+
+  if (!inference.inferred) {
+    return renderedStep;
+  }
+
+  inference.products.forEach(
+    (product, index) => {
+
+      const alias =
+        `inferred_${index}`;
+
+      renderedStep.species[alias] =
+        product;
+    }
+  );
+
+  return renderedStep;
+}
+
+function buildRenderEntities(step) {
+
+  const entities = [];
+
+  for (
+    const [alias, molecule]
+    of Object.entries(step.species)
+  ) {
+
+    const inferred =
+      alias.startsWith('inferred_');
+
+    entities.push({
+      alias,
+      molecule,
+
+      role:
+        inferred
+          ? 'product'
+          : 'reactant'
+    });
+  }
+
+  return entities;
+}
+
+function computePositions(
+  steps,
+  horizontal,
+  laneMap
+) {
+
+  return steps.map((step, si) => {
+
+    const entities =
+      buildRenderEntities(step);
+
+    const reactants =
+      entities.filter(
+        e => e.role === 'reactant'
+      );
+
+    const products =
+      entities.filter(
+        e => e.role === 'product'
+      );
+
+    const orderedReactants =
+      getOrderedAliases(
+        reactants,
+        laneMap
+      );
+
+    const orderedProducts =
+      getOrderedAliases(
+        products,
+        laneMap
+      );
 
     const stepPos = {};
-    const aliases = getOrderedAliases(step, laneMap);
 
-    aliases.forEach((alias, localIndex) => {
+    const reactionCenterX =
+      STEP_X_ORIGIN +
+      si * STEP_X_GAP;
 
-      if (horizontal) {
+    const reactionCenterY =
+      STEP_Y_ORIGIN +
+      si * STEP_Y_GAP;
 
-        stepPos[alias] = {
-          x: STEP_X_ORIGIN + si * STEP_X_GAP,
-          y: STEP_Y_ORIGIN + localIndex * MOLECULE_Y_GAP
-        };
+    // ─────────────────────────────────────
+    // Reactants
+    // ─────────────────────────────────────
 
-      } else {
+    orderedReactants.forEach(
+      (alias, i) => {
 
-        stepPos[alias] = {
-          x: STEP_X_ORIGIN + localIndex * MOLECULE_X_GAP,
-          y: STEP_Y_ORIGIN + si * STEP_Y_GAP
-        };
+        if (horizontal) {
+
+          stepPos[alias] = {
+
+            x:
+              reactionCenterX,
+
+            y:
+              STEP_Y_ORIGIN +
+              i * MOLECULE_Y_GAP
+          };
+
+        } else {
+
+          stepPos[alias] = {
+
+            x:
+              reactionCenterX +
+              i * MOLECULE_X_GAP,
+
+            y:
+              reactionCenterY
+          };
+        }
       }
-    });
+    );
+
+    // ─────────────────────────────────────
+    // Products
+    // ─────────────────────────────────────
+
+    orderedProducts.forEach(
+      (alias, i) => {
+
+        if (horizontal) {
+
+          stepPos[alias] = {
+
+            x:
+              reactionCenterX,
+
+            y:
+              STEP_Y_ORIGIN +
+              (reactants.length + 3 + i)
+              * MOLECULE_Y_GAP
+          };
+
+        } else {
+
+          stepPos[alias] = {
+
+            // Keep products clearly separated
+            // from reaction center
+
+            x:
+              reactionCenterX +
+              450,
+
+            // Stack vertically
+
+            y:
+              reactionCenterY +
+              120 +
+              i * MOLECULE_Y_GAP
+          };
+        }
+      }
+    );
 
     return stepPos;
+
   });
 }
-
+    
 function computeCanvas(positions) {
 
   let maxX = 0;
@@ -412,15 +625,32 @@ function offsetEndpoint(
   const dy = y2 - y1;
 
   const len =
-    Math.sqrt(dx * dx + dy * dy) || 1;
+    Math.sqrt(
+      dx * dx +
+      dy * dy
+    ) || 1;
+
+  // Don't shorten tiny arrows
+
+  if (
+    len < distance * 2
+  ) {
+
+    return {
+      x: x2,
+      y: y2
+    };
+  }
 
   return {
 
     x:
-      x2 - (dx / len) * distance,
+      x2 -
+      (dx / len) * distance,
 
     y:
-      y2 - (dy / len) * distance
+      y2 -
+      (dy / len) * distance
   };
 }
 
@@ -435,104 +665,177 @@ function arrowPath(
   const dx = x2 - x1;
   const dy = y2 - y1;
 
+  const distance =
+    Math.sqrt(
+      dx * dx +
+      dy * dy
+    );
+
+  // Tiny arrows:
+  // avoid artificial loops
+
+  if (
+    distance < 50
+  ) {
+
+    return `
+      M ${x1} ${y1}
+      L ${x2} ${y2}
+    `;
+  }
+
   const mostlyVertical =
-    Math.abs(dy) > Math.abs(dx);
+    Math.abs(dy) >
+    Math.abs(dx);
 
   const base =
     24 + arrowIndex * 6;
 
-  const attempts = [
-    base,
-    base + 10,
-    base + 20
-  ];
-
-  for (const mag of attempts) {
-
-    let cx;
-    let cy;
-
-    if (mostlyVertical) {
-
-      cx = x1 + (dx * 0.35);
-      cy = y1 + (dy * 0.5);
-
-      const side =
-        dx >= 0 ? 1 : -1;
-
-      cx += side * mag;
-
-    } else {
-
-      cx = x1 + (dx * 0.5);
-      cy = y1 + (dy * 0.35);
-
-      const side =
-        dy >= 0 ? 1 : -1;
-
-      cy += side * mag;
-    }
-
-    if (
-      !collides(
-        x1,
-        y1,
-        cx,
-        cy,
-        x2,
-        y2
-      )
-    ) {
-
-      return `
-        M ${x1} ${y1}
-        Q ${cx} ${cy}
-        ${x2} ${y2}
-      `;
-    }
-  }
+  let cx;
+  let cy;
 
   if (mostlyVertical) {
 
-    return `
-      M ${x1} ${y1}
-      Q ${
-        x1 + dx * 0.35 + base
-      } ${
-        y1 + dy * 0.5
-      }
-      ${x2} ${y2}
-    `;
+    cx =
+      x1 +
+      dx * 0.35;
+
+    cy =
+      y1 +
+      dy * 0.5;
+
+    const side =
+      dx >= 0
+        ? 1
+        : -1;
+
+    cx +=
+      side * base;
+
+  } else {
+
+    cx =
+      x1 +
+      dx * 0.5;
+
+    cy =
+      y1 +
+      dy * 0.35;
+
+    const side =
+      dy >= 0
+        ? 1
+        : -1;
+
+    cy +=
+      side * base;
   }
 
   return `
     M ${x1} ${y1}
-    Q ${
-      x1 + dx * 0.5
-    } ${
-      y1 + dy * 0.35 + base
-    }
+    Q ${cx} ${cy}
     ${x2} ${y2}
   `;
 }
 
+function resolveAnchor(
+  refString,
+  stepPos,
+  step,
+  role = 'to'
+) {
+
+  const ref =
+    parseArrowRef(refString);
+
+  const mol =
+    resolveMol(
+      ref.alias,
+      step
+    );
+
+  const atom =
+    getAtomPos(
+      mol,
+      ref,
+      role
+    );
+
+  const origin =
+    stepPos[
+      ref.alias
+    ];
+
+  if (
+    !origin
+  ) {
+    return null;
+  }
+
+  return {
+
+    x:
+      origin.x +
+      atom.x,
+
+    y:
+      origin.y +
+      atom.y
+  };
+}
+
+function renderArrow(
+  x1,
+  y1,
+  x2,
+  y2,
+  arrowIndex = 0
+) {
+
+  const adjusted =
+    offsetEndpoint(
+      x1,
+      y1,
+      x2,
+      y2
+    );
+
+  const path =
+    arrowPath(
+      x1,
+      y1,
+      adjusted.x,
+      adjusted.y,
+      arrowIndex
+    );
+
+  return `
+    <path
+      d="${path}"
+      fill="none"
+      stroke="black"
+      stroke-width="1.6"
+      marker-end="url(#arrowhead)"
+    />
+  `;
+}
+
 function render(ast, horizontal) {
-
   LABEL_BOXES = [];
-
+  const renderableSteps =
+    ast.steps.map(buildRenderableStep);
   const laneMap =
-    buildLaneMap(ast);
-
+    buildLaneMap({
+      steps: renderableSteps
+    });
   const positions =
     computePositions(
-      ast,
+      renderableSteps,
       horizontal,
       laneMap
     );
-
   const { width, height } =
     computeCanvas(positions);
-
   let body = `
     <defs>
       <marker
@@ -544,7 +847,6 @@ function render(ast, horizontal) {
         orient="auto"
         markerUnits="strokeWidth"
       >
-
         <polygon
           points="0 0, 7 2.5, 0 5"
           fill="black"
@@ -552,20 +854,18 @@ function render(ast, horizontal) {
       </marker>
     </defs>
   `;
-
-  ast.steps.forEach((step, si) => {
+  renderableSteps.forEach((step, si) => {
     validateTransforms(step);
+    const entities =
+      buildRenderEntities(step);
     const aliases =
       getOrderedAliases(
-        step,
+        entities,
         laneMap
       );
-
     for (const alias of aliases) {
-
       const p =
         positions[si][alias];
-
       body += renderMolecule(
         alias,
         step,
@@ -573,109 +873,132 @@ function render(ast, horizontal) {
         p.y
       );
     }
-
+    const semanticStep = {
+      ...step,
+      species:
+        Object.fromEntries(
+          Object.entries(
+            step.species
+          ).filter(
+            ([alias]) =>
+              !alias.startsWith(
+                'inferred_'
+              )
+          )
+        )
+    };
     const effectiveArrows =
       step.arrows.length > 0
         ? step.arrows
-        : inferArrowsFromTransforms(step);
-
+        : inferArrowsFromTransforms(
+            semanticStep
+          );
     effectiveArrows.forEach(
       (arrow, ai) => {
 
         if (!arrow.from || !arrow.to) {
-          console.warn(
+         console.warn(
             '[mechlang] skipping malformed arrow with missing endpoint'
           );
           return;
         }
-        
+
         const fromRef =
-        parseArrowRef(
-          arrow.from ?? ''
-        );
+           resolveAnchor(
+            arrow.from,
+            positions[si],
+            semanticStep,
+            'from'
+          );
 
-      const toRef =
-        parseArrowRef(
-          arrow.to ?? ''
-        );
+        const toRef =
+          resolveAnchor(
+            arrow.to,
+            positions[si],
+            semanticStep,
+            'to'
+          );
 
-      const p1 =
-        positions[si][fromRef.alias];
+        if (!fromRef || !toRef) return;
 
-      const p2 =
-        positions[si][toRef.alias];
+        let path;
 
-      if (!p1 || !p2) return;
+        if (
+          arrow.inferenceType === 'leaving'
+        ) {
 
-      const a1 = getAtomPos(
-        resolveMol(
-          fromRef.alias,
-          step
-        ),
-        fromRef,
-        'from'
-      );
+          const dx =
+            toRef.x - fromRef.x;
 
-      const a2 = getAtomPos(
-        resolveMol(
-          toRef.alias,
-          step
-        ),
-        toRef,
-        'to'
-      );
+          const dy =
+            toRef.y - fromRef.y;
 
-      const startX =
-        p1.x + a1.x;
+          const len =
+            Math.sqrt(
+              dx * dx +
+              dy * dy
+            ) || 1;
 
-      const startY =
-        p1.y + a1.y;
+          const ux =
+            dx / len;
 
-      const rawEndX =
-        p2.x + a2.x;
+          const uy =
+            dy / len;
 
-      const rawEndY =
-        p2.y + a2.y;
+          const px =
+            -uy;
 
-      const shortenDistance =
-        arrow.inferenceType === 'leaving'
-          ? 4
-          : 12;
+          const py =
+            uy = dx / len;
 
-      const adjustedEnd =
-        offsetEndpoint(
-          startX,
-          startY,
-          rawEndX,
-          rawEndY,
-          shortenDistance
-        );
+          const endX =
+            toRef.x +
+            ux * 20 +
+            px * 26;
 
-      const arrowIndex =
-        arrow.inferenceType === 'leaving'
-          ? ai + 2
-          : ai;
+          const endY =
+            toRef.y +
+            uy * 20 +
+            py * 26;
 
-      const d = arrowPath(
-        startX,
-        startY,
-        adjustedEnd.x,
-        adjustedEnd.y,
-        arrowIndex
-      );
+          path =
+            arrowPath(
+              toRef.x +
+              ux * 10 +
+              px * 12,
 
-      body += `
-        <path
-          d="${d}"
-          stroke="black"
-          fill="none"
-          stroke-width="1.2"
-          marker-end="url(#arrowhead)"
-        />
-      `;
-    });
+              toRef.y +
+              uy * 10 +
+              py * 12,
+
+              endX,
+              endY,
+              0
+            );
+
+        } else {
+
+          path =
+            arrowPath(
+              fromRef.x,
+              fromRef.y,
+              toRef.x,
+              toRef.y,
+              ai
+            );
+        }
+
+        body += `
+          <path
+            d="${path}"
+            fill="none"
+            stroke="black"
+            stroke-width="1.6"
+            marker-end="url(#arrowhead)"
+          />
+        `;
+
   });
-
   return `
     <svg
       viewBox="0 0 ${width} ${height}"

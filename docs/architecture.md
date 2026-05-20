@@ -6,12 +6,14 @@ responsibilities of each component in the pipeline.
 ---
 
 ## Pipeline Overview
-```
+```text
 .mech source file
       ↓
   parse.js        → AST (with persistence post-pass)
       ↓
-semantic-engine.js
+semantic-engine.js → semantic annotations + inferred arrows
+      ↓
+product-engine.js → inferred products
       ↓
   render.js       → SVG string
       ↓
@@ -22,9 +24,11 @@ The pipeline is strictly layered.
 
 - `parse.js` handles syntax only
 - `semantic-engine.js` handles chemistry reasoning and inference
+- `product-engine.js` handles heuristic product synthesis
 - `render.js` handles visualization only
 
 No component reaches backward across layers.
+
 ---
 
 ## Components
@@ -38,6 +42,7 @@ Reads a `.mech` source string and produces an AST of the form:
     {
       species: { role: "MoleculeKey", ... },
       arrows:  [ { curved: true, from: "role.atom", to: "role.atom" }, ... ],
+      transforms: [ { type: "form" | "break", bond: ["A", "B"] }, ... ],
       persist: [ "role", ... ]
     }
   ]
@@ -92,9 +97,25 @@ Current supported inference patterns:
 The semantic engine is deterministic and heuristic-driven.
 It is intentionally not yet a full graph-rewrite chemistry system.
 
+### `src/product-engine.js`
+
+Consumes the parsed AST plus semantic transform output and infers products.
+
+Responsibilities:
+- infer heuristic substitution products from transform operations
+- synthesize product molecule keys
+- remain independent from rendering
+
+Current supported inference patterns:
+- SN2 product synthesis
+- leaving-group emission
+
+The product engine is deterministic and heuristic-driven.
+It is intentionally not yet a full graph-rewrite chemistry system.
+
 ### `src/render.js`
 
-Consumes the AST and molecule registry. Produces a complete SVG string.
+Consumes the AST, semantic annotations, and inferred products. Produces a complete SVG string.
 The renderer is fully blind to persistence mechanics — it sees only a
 fully resolved species map per step.
 
@@ -103,6 +124,7 @@ Responsibilities:
 - Build a global lane map for species ordering
 - Compute per-step compact positions using local re-indexing
 - Render molecule bonds and atom labels
+- Render inferred products
 - Render mechanism arrows with bond midpoint resolution
 - Compute dynamic canvas dimensions
 - Write output to `out/`
@@ -149,7 +171,7 @@ step {
 ## Species Persistence (v0.12)
 
 Molecules may be carried across steps using `persist:`:
-```
+```mech
 step {
   species:
     nuc = CN-
