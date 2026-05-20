@@ -4,54 +4,89 @@ export function validateTransforms(step) {
 
   for (const transform of step.transforms || []) {
 
-    // ── form C-CN ────────────────────────────────────────────────────────
+    // ── form C-X validation ───────────────────────────────────────────────
+
     if (
-      transform.type === 'form' &&
-      transform.bond[0] === 'C' &&
-      transform.bond[1] === 'CN'
-    ) {
-
-      const hasCN =
-        Object.values(step.species)
-          .includes('CN-');
-
-      if (!hasCN) {
-
-        console.warn(
-          '[mechlang] transform requires CN- nucleophile but none was found.'
-        );
-      }
-    }
-
-    // ── break C-X ────────────────────────────────────────────────────────
-    if (
-      transform.type === 'break'
+      transform.type === 'form'
     ) {
 
       const [a, b] =
         transform.bond;
 
-      let found = false;
+      if (
+        a === 'C' &&
+        ['CN', 'OH'].includes(b)
+      ) {
 
-      for (const molKey of Object.values(step.species)) {
+        const requiredNucleophile =
+
+          b === 'CN'
+            ? 'CN-'
+            : 'OH-';
+
+        const hasNucleophile =
+          Object.values(
+            step.species
+          ).includes(
+            requiredNucleophile
+          );
+
+        if (!hasNucleophile) {
+
+          console.warn(
+            `[mechlang] transform requires ${requiredNucleophile} nucleophile but none was found.`
+          );
+        }
+      }
+    }
+
+    // ── break C-X validation ─────────────────────────────────────────────
+
+    if (
+      transform.type === 'break'
+    ) {
+
+      const [a,b] =
+        transform.bond;
+
+      let found =
+        false;
+
+      for (
+        const molKey
+        of Object.values(
+          step.species
+        )
+      ) {
 
         const mol =
-          moleculeRegistry[molKey];
+          moleculeRegistry[
+            molKey
+          ];
 
         if (!mol) continue;
 
-        for (const bond of mol.bonds || []) {
+        for (
+          const bond
+          of (mol.bonds || [])
+        ) {
 
-          const [x, y] = bond;
+          const [x,y] =
+            bond;
 
           const direct =
-            x === a && y === b;
+            x===a &&
+            y===b;
 
           const reverse =
-            x === b && y === a;
+            x===b &&
+            y===a;
 
-          if (direct || reverse) {
-            found = true;
+          if (
+            direct ||
+            reverse
+          ) {
+            found=true;
           }
         }
       }
@@ -68,91 +103,204 @@ export function validateTransforms(step) {
 
 export function inferArrowsFromTransforms(step) {
 
-  const inferred = [];
+  const inferred=[];
 
-  for (const transform of step.transforms || []) {
+  for (
+    const transform
+    of (step.transforms||[])
+  ) {
 
-    // ── FORM bond inference ───────────────────────────────────────────────
-    if (transform.type === 'form') {
+    // ── FORM inference ───────────────────────────────────────────────
 
-      const [a, b] = transform.bond;
+    if (
+      transform.type==='form'
+    ) {
 
-      // SN2 heuristic:
-      // form C-CN
+      const [a,b]=
+        transform.bond;
 
-      if (a === 'C' && b === 'CN') {
+      if (
+        a==='C' &&
+        ['CN','OH'].includes(
+          b
+        )
+      ) {
 
-        let nucRole = null;
-        let subRole = null;
+        let nucRole =
+          null;
 
-        for (const [role, molKey] of Object.entries(step.species)) {
+        let subRole =
+          null;
 
-          // nucleophile
-          if (molKey === 'CN-') {
-            nucRole = role;
+        for (
+          const [role,molKey]
+          of Object.entries(
+            step.species
+          )
+        ) {
+
+          const isMatchingNucleophile =
+
+            (
+              b==='CN' &&
+              molKey==='CN-'
+            )
+
+            ||
+
+            (
+              b==='OH' &&
+              molKey==='OH-'
+            );
+
+          if (
+            isMatchingNucleophile
+          ) {
+
+            nucRole=
+              role;
           }
 
-          // electrophile
           if (
-            molKey.includes('Br') ||
-            molKey.includes('Cl') ||
-            molKey.includes('I')
+
+            molKey.includes(
+              'Br'
+            ) ||
+
+            molKey.includes(
+              'Cl'
+            ) ||
+
+            molKey.includes(
+              'I'
+            )
+
           ) {
-            subRole = role;
+
+            subRole=
+              role;
           }
         }
 
-        if (nucRole && subRole) {
+        if (
+          nucRole &&
+          subRole
+        ) {
 
           const leavingAtom =
-            step.species[subRole].includes('Br')
-              ? 'Br'
-              : step.species[subRole].includes('Cl')
-                ? 'Cl'
-                : 'I';
+
+            step.species[
+              subRole
+            ].includes(
+              'Br'
+            )
+
+            ? 'Br'
+
+            :
+
+            step.species[
+              subRole
+            ].includes(
+              'Cl'
+            )
+
+            ? 'Cl'
+
+            : 'I';
+
+          const attackAtom =
+
+            b==='CN'
+              ? 'C'
+              : 'O';
 
           inferred.push({
-            curved: true,
-            inferred: true,
-            inferenceType: 'attack',
-            from: `${nucRole}.C`,
-            to:   `${subRole}.C-${leavingAtom}`
+
+            curved:true,
+            inferred:true,
+
+            inferenceType:
+              'attack',
+
+            from:
+              `${nucRole}.${attackAtom}`,
+
+            to:
+              `${subRole}.C-${leavingAtom}`
+
           });
         }
       }
     }
 
-    // ── BREAK bond inference ──────────────────────────────────────────────
-    if (transform.type === 'break') {
+    // ── BREAK inference ───────────────────────────────────────────────
 
-      const [a, b] = transform.bond;
+    if (
+      transform.type==='break'
+    ) {
 
-      // Leaving-group heuristic
+      const [a,b]=
+        transform.bond;
+
       if (
-        a === 'C' &&
-        ['Br', 'Cl', 'I'].includes(b)
+
+        a==='C' &&
+
+        ['Br','Cl','I']
+        .includes(
+          b
+        )
+
       ) {
 
-        let subRole = null;
+        let subRole =
+          null;
 
-        for (const [role, molKey] of Object.entries(step.species)) {
+        for (
+          const [role,molKey]
+          of Object.entries(
+            step.species
+          )
+        ) {
 
           if (
-            molKey.includes(b) &&
-            molKey.includes('CH3')
+
+            molKey.includes(
+              b
+            )
+
+            &&
+
+            molKey.includes(
+              'CH3'
+            )
+
           ) {
-            subRole = role;
+
+            subRole=
+              role;
           }
         }
 
-        if (subRole) {
+        if (
+          subRole
+        ) {
 
           inferred.push({
-            curved: true,
-            inferred: true,
-            inferenceType: 'leaving',
-            from: `${subRole}.C-${b}`,
-            to:   `${subRole}.${b}`
+
+            curved:true,
+            inferred:true,
+
+            inferenceType:
+              'leaving',
+
+            from:
+              `${subRole}.C-${b}`,
+
+            to:
+              `${subRole}.${b}`
+
           });
         }
       }
