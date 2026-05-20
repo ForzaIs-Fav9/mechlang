@@ -8,14 +8,36 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Planned
+## Planned (v0.16+)
 
-* heuristic product inference engine
-* inferred product rendering
-* reaction-state synthesis groundwork
-* graph-based semantic mutation groundwork
+* transition-state construction
+* intermediate-state representation
+* multi-step reaction synthesis
+* resonance and state propagation
 
 ---
+# v0.15.0 — Product Inference
+
+## Added
+
+- Automatic product inference engine
+- SN2 reaction synthesis
+- Curved-arrow inference
+- Leaving-group arrow rendering
+- Product placement system
+- Semantic transform validation
+
+## Improved
+
+- Arrow routing geometry
+- Bond midpoint anchor handling
+- SVG mechanism rendering
+
+## Fixed
+
+- Leaving-group arrow overlap
+- Curved arrow hook artifacts
+- Arrow-anchor collisions
 
 ## v0.14.0 — Semantic Transforms
 
