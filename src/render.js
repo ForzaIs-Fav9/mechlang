@@ -936,7 +936,7 @@ function render(ast, horizontal) {
           // Pass arrowIndex=0 so this short local arrow gets a clean,
           // unexaggerated curve rather than the stacked-arrow offset
           path = arrowPath(
-            fromRef.x, fromRef.y,
+            toRef.x, toRef.y,
             endX, endY,
             0
           );
