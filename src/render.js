@@ -821,27 +821,21 @@ function renderArrow(
 }
 
 function render(ast, horizontal) {
-
   LABEL_BOXES = [];
-
   const renderableSteps =
     ast.steps.map(buildRenderableStep);
-
   const laneMap =
     buildLaneMap({
       steps: renderableSteps
     });
-
   const positions =
     computePositions(
       renderableSteps,
       horizontal,
       laneMap
     );
-
   const { width, height } =
     computeCanvas(positions);
-
   let body = `
     <defs>
       <marker
@@ -853,7 +847,6 @@ function render(ast, horizontal) {
         orient="auto"
         markerUnits="strokeWidth"
       >
-
         <polygon
           points="0 0, 7 2.5, 0 5"
           fill="black"
@@ -861,25 +854,18 @@ function render(ast, horizontal) {
       </marker>
     </defs>
   `;
-
   renderableSteps.forEach((step, si) => {
-
     validateTransforms(step);
-
     const entities =
       buildRenderEntities(step);
-
     const aliases =
       getOrderedAliases(
         entities,
         laneMap
       );
-
     for (const alias of aliases) {
-
       const p =
         positions[si][alias];
-
       body += renderMolecule(
         alias,
         step,
@@ -887,37 +873,28 @@ function render(ast, horizontal) {
         p.y
       );
     }
-
     const semanticStep = {
-
       ...step,
-
       species:
         Object.fromEntries(
-
           Object.entries(
             step.species
           ).filter(
-
             ([alias]) =>
               !alias.startsWith(
                 'inferred_'
               )
-
           )
         )
     };
-
     const effectiveArrows =
       step.arrows.length > 0
         ? step.arrows
         : inferArrowsFromTransforms(
             semanticStep
           );
-
     effectiveArrows.forEach(
       (arrow, ai) => {
-
         const fromRef =
           resolveAnchor(
             arrow.from,
@@ -925,7 +902,6 @@ function render(ast, horizontal) {
             semanticStep,
             'from'
           );
-
         const toRef =
           resolveAnchor(
             arrow.to,
@@ -933,59 +909,22 @@ function render(ast, horizontal) {
             semanticStep,
             'to'
           );
-
         if (!fromRef || !toRef) return;
-
         let targetX = toRef.x;
         let targetY = toRef.y;
-
         let path;
-        
-        if (
-          arrow.inferenceType === 'leaving'
-        ) {
 
-          const dx =
-            toRef.x - fromRef.x;
-
-          const dy =
-            toRef.y - fromRef.y;
-
-          const len =
-            Math.sqrt(
-              dx * dx +
-              dy * dy
-            ) || 1;
-
-          const nx =
-            -dy / len;
-
-          const ny =
-            dx / len;
-
-          const startX =
-            fromRef.x +
-            nx * 4;
-
-          const startY =
-            fromRef.y +
-            ny * 4;
-
-          const endX =
-            toRef.x +
-            nx * 10;
-
-          const endY =
-            toRef.y +
-            ny * 10;
-
-          path = `
-            M ${startX} ${startY}
-            L ${endX} ${endY}
-          `;
-
+        if (arrow.inferenceType === 'leaving') {
+          const adjusted = offsetEndpoint(
+            fromRef.x, fromRef.y,
+            toRef.x,   toRef.y
+          );
+          path = arrowPath(
+            fromRef.x, fromRef.y,
+            adjusted.x, adjusted.y,
+            ai
+          );
         } else {
-
           path =
             arrowPath(
               fromRef.x,
@@ -1007,7 +946,6 @@ function render(ast, horizontal) {
       }
     );
   });
-
   return `
     <svg
       viewBox="0 0 ${width} ${height}"
