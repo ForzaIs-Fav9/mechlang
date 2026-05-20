@@ -180,6 +180,12 @@ mechlang is still an early-stage prototype focused on semantic architecture.
 * double-bond rendering
 * charges
 * semantic engine tests
+* Semantic transform validation
+* Automatic product inference
+* Automatic curved-arrow mechanism inference
+* SVG mechanism rendering
+* SN2 mechanism support
+* Product separation and leaving-group rendering
 
 ### Not yet supported
 
@@ -217,17 +223,14 @@ Each `step {}` defines a self-contained semantic context:
 ### Syntax
 
 ```mech
-step {
-  species:
-    nucleophile = CN-
-    electrophile = CH3-Br
+step:
+species:
+sub = CH3-Br
+nuc = CN-
 
-  arrow(
-    curved,
-    from = nucleophile.C,
-    to   = electrophile.C-Br
-  )
-}
+transform:
+form C-CN
+break C-Br
 ```
 
 Semantic Rules:
