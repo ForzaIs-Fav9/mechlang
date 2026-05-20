@@ -582,7 +582,14 @@ function render(ast, horizontal) {
     effectiveArrows.forEach(
       (arrow, ai) => {
 
-      const fromRef =
+        if (!arrow.from || !arrow.to) {
+          console.warn(
+            '[mechlang] skipping malformed arrow with missing endpoint'
+          );
+          return;
+        }
+        
+        const fromRef =
         parseArrowRef(
           arrow.from ?? ''
         );
