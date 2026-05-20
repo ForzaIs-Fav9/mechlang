@@ -84,51 +84,67 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 
 ---
 
-## Phase 4 — Semantic Engine (v0.14)
+## Phase 4 — Semantic Engine (v0.14) ✅ Completed
 
-### S.1 — Semantic Transform Blocks
+### S.1 — Semantic Transform Blocks ✅
 - `transform {}` syntax
 - `form A-B`
 - `break A-B`
 - AST-level transform representation
 
-### S.2 — Automatic Arrow Inference
+### S.2 — Automatic Arrow Inference ✅
 - Semantic transforms infer curved-arrow electron flow
 - Explicit `arrow()` blocks remain supported
 - Deterministic heuristic inference layer
 
-### S.3 — Semantic Diagnostics
+### S.3 — Semantic Diagnostics ✅
 - Compiler-style semantic warnings
 - Missing nucleophile detection
 - Missing bond detection
 - Graceful degradation without render failure
 
-### S.4 — Semantic Engine Extraction
+### S.4 — Semantic Engine Extraction ✅
 - `semantic-engine.js`
 - Chemistry reasoning separated from renderer
 - Compiler-style layered pipeline
 
 ---
 
-## Phase 5 — Product Inference (v0.15)
+## Phase 5 — Product Inference (v0.15) ✅ Completed
 
-### P.1 — Heuristic Product Synthesis
+### P.1 — Heuristic Product Synthesis ✅
 - Infer reaction products from transform operations
 - Initial deterministic substitution patterns
 - No graph rewriting yet
 
-### P.2 — Product Rendering
+### P.2 — Product Rendering ✅
 - Render inferred products automatically
 - Optional explicit override support
 
-### P.3 — Reaction-State Engine
+### P.3 — Reaction-State Engine Groundwork ✅
 - Foundation for future graph-based chemistry mutation
-- Intermediate-state synthesis
-- Semantic reaction-state transitions
+- Intermediate-state synthesis groundwork
+- Semantic reaction-state transitions groundwork
 
 ---
 
-## Phase 6 — Public Launch (v1.0)
+## Phase 6 — Reaction-State Construction (v0.16)
+
+### R.1 — Reaction-State Representation
+- Structured before/transition/after states
+- Partial bond and intermediate support
+
+### R.2 — Multi-Step State Propagation
+- Persisting state through several steps
+- Intermediate products carried forward explicitly
+
+### R.3 — Resonance and State Propagation
+- Multiple valid states
+- Transition-aware rendering
+
+---
+
+## Phase 7 — Public Launch (v1.0)
 
 ### Six canonical mechanisms must render correctly:
 1. SN2 — single step, 2 arrows, charges

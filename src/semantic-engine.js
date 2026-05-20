@@ -101,7 +101,9 @@ export function validateTransforms(step) {
   }
 }
 
-export function inferArrowsFromTransforms(step) {
+export function inferArrowsFromTransforms(
+  step
+) {
 
   const inferred=[];
 
@@ -299,8 +301,9 @@ export function inferArrowsFromTransforms(step) {
               `${subRole}.C-${b}`,
 
             to:
-              `${subRole}.${b}`
+              `${subRole}.${b}`,
 
+            local:true
           });
         }
       }

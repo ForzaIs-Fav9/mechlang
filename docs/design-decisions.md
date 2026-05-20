@@ -146,3 +146,20 @@ Implicit carry creates hidden state — a reader cannot know what's on
 canvas without tracing backwards through all prior steps. Explicit
 `persist:` keeps every step self-documenting. The overhead is minimal:
 one line per step, comma-separated for multiple aliases.
+
+---
+
+## 13. Heuristic product inference is its own semantic layer
+
+**Decision:** Product inference lives in `product-engine.js` and is
+consumed by `render.js`, but it does not belong inside rendering itself
+or inside the arrow-inference layer.
+
+**Why:** Rendering must stay visual-only. Arrow inference tells the
+viewer where electrons move; product inference tells the viewer what
+species appear after the transform. Keeping those responsibilities
+separate lets reaction-state synthesis evolve independently without
+turning the renderer into a chemistry engine. It also keeps the
+pipeline testable and deterministic.
+
+---
