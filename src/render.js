@@ -973,24 +973,15 @@ function render(ast, horizontal) {
 
           const endX =
             toRef.x +
-            nx * 18;
+            nx * 10;
 
           const endY =
             toRef.y +
-            ny * 18;
-
-          const cx =
-            (startX + endX) / 2 +
-            nx * 10;
-
-          const cy =
-            (startY + endY) / 2 +
             ny * 10;
 
           path = `
             M ${startX} ${startY}
-            Q ${cx} ${cy}
-            ${endX} ${endY}
+            L ${endX} ${endY}
           `;
 
         } else {
