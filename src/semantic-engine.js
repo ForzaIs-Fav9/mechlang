@@ -4,27 +4,43 @@ export function validateTransforms(step) {
 
   for (const transform of step.transforms || []) {
 
-    // ── form C-CN ────────────────────────────────────────
+    // ── form C-X validation ───────────────────────────────────────────────
 
     if (
-      transform.type === 'form' &&
-      transform.bond[0] === 'C' &&
-      transform.bond[1] === 'CN'
+      transform.type === 'form'
     ) {
 
-      const hasCN =
-        Object.values(step.species)
-          .includes('CN-');
+      const [a, b] =
+        transform.bond;
 
-      if (!hasCN) {
+      if (
+        a === 'C' &&
+        ['CN', 'OH'].includes(b)
+      ) {
 
-        console.warn(
-          '[mechlang] transform requires CN- nucleophile but none was found.'
-        );
+        const requiredNucleophile =
+
+          b === 'CN'
+            ? 'CN-'
+            : 'OH-';
+
+        const hasNucleophile =
+          Object.values(
+            step.species
+          ).includes(
+            requiredNucleophile
+          );
+
+        if (!hasNucleophile) {
+
+          console.warn(
+            `[mechlang] transform requires ${requiredNucleophile} nucleophile but none was found.`
+          );
+        }
       }
     }
 
-    // ── break bond validation ────────────────────────────
+    // ── break C-X validation ─────────────────────────────────────────────
 
     if (
       transform.type === 'break'
@@ -38,11 +54,15 @@ export function validateTransforms(step) {
 
       for (
         const molKey
-        of Object.values(step.species)
+        of Object.values(
+          step.species
+        )
       ) {
 
         const mol =
-          moleculeRegistry[molKey];
+          moleculeRegistry[
+            molKey
+          ];
 
         if (!mol) continue;
 
@@ -55,10 +75,12 @@ export function validateTransforms(step) {
             bond;
 
           const direct =
-            x===a && y===b;
+            x===a &&
+            y===b;
 
           const reverse =
-            x===b && y===a;
+            x===b &&
+            y===a;
 
           if (
             direct ||
@@ -90,9 +112,7 @@ export function inferArrowsFromTransforms(
     of (step.transforms||[])
   ) {
 
-    // ─────────────────────────────────────
-    // FORM
-    // ─────────────────────────────────────
+    // ── FORM inference ───────────────────────────────────────────────
 
     if (
       transform.type==='form'
@@ -103,11 +123,16 @@ export function inferArrowsFromTransforms(
 
       if (
         a==='C' &&
-        b==='CN'
+        ['CN','OH'].includes(
+          b
+        )
       ) {
 
-        let nucRole=null;
-        let subRole=null;
+        let nucRole =
+          null;
+
+        let subRole =
+          null;
 
         for (
           const [role,molKey]
@@ -116,21 +141,46 @@ export function inferArrowsFromTransforms(
           )
         ) {
 
+          const isMatchingNucleophile =
+
+            (
+              b==='CN' &&
+              molKey==='CN-'
+            )
+
+            ||
+
+            (
+              b==='OH' &&
+              molKey==='OH-'
+            );
+
           if (
-            molKey==='CN-'
+            isMatchingNucleophile
           ) {
-            nucRole=role;
+
+            nucRole=
+              role;
           }
 
           if (
 
-            molKey.includes('Br') ||
-            molKey.includes('Cl') ||
-            molKey.includes('I')
+            molKey.includes(
+              'Br'
+            ) ||
+
+            molKey.includes(
+              'Cl'
+            ) ||
+
+            molKey.includes(
+              'I'
+            )
 
           ) {
 
-            subRole=role;
+            subRole=
+              role;
           }
         }
 
@@ -143,7 +193,9 @@ export function inferArrowsFromTransforms(
 
             step.species[
               subRole
-            ].includes('Br')
+            ].includes(
+              'Br'
+            )
 
             ? 'Br'
 
@@ -151,11 +203,19 @@ export function inferArrowsFromTransforms(
 
             step.species[
               subRole
-            ].includes('Cl')
+            ].includes(
+              'Cl'
+            )
 
             ? 'Cl'
 
             : 'I';
+
+          const attackAtom =
+
+            b==='CN'
+              ? 'C'
+              : 'O';
 
           inferred.push({
 
@@ -166,7 +226,7 @@ export function inferArrowsFromTransforms(
               'attack',
 
             from:
-              `${nucRole}.C`,
+              `${nucRole}.${attackAtom}`,
 
             to:
               `${subRole}.C-${leavingAtom}`
@@ -176,9 +236,7 @@ export function inferArrowsFromTransforms(
       }
     }
 
-    // ─────────────────────────────────────
-    // BREAK
-    // ─────────────────────────────────────
+    // ── BREAK inference ───────────────────────────────────────────────
 
     if (
       transform.type==='break'
@@ -190,12 +248,16 @@ export function inferArrowsFromTransforms(
       if (
 
         a==='C' &&
+
         ['Br','Cl','I']
-        .includes(b)
+        .includes(
+          b
+        )
 
       ) {
 
-        let subRole=null;
+        let subRole =
+          null;
 
         for (
           const [role,molKey]
@@ -208,7 +270,9 @@ export function inferArrowsFromTransforms(
 
             molKey.includes(
               b
-            ) &&
+            )
+
+            &&
 
             molKey.includes(
               'CH3'
@@ -216,7 +280,8 @@ export function inferArrowsFromTransforms(
 
           ) {
 
-            subRole=role;
+            subRole=
+              role;
           }
         }
 
@@ -226,21 +291,19 @@ export function inferArrowsFromTransforms(
 
           inferred.push({
 
-            curved: true,
-            inferred: true,
+            curved:true,
+            inferred:true,
 
             inferenceType:
               'leaving',
 
-            // originate at carbon
             from:
               `${subRole}.C-${b}`,
 
-            // terminate at leaving atom
             to:
               `${subRole}.${b}`,
 
-            local: true
+            local:true
           });
         }
       }
