@@ -930,13 +930,14 @@ function render(ast, horizontal) {
 
           // Land 40px past the leaving atom along the departure axis
           // and 20px off the bond axis so the curve is clearly separate
-          const endX = toRef.x + ux * 10 + px * 14;
-          const endY = toRef.y + uy * 10 + py * 14;
+          const endX = toRef.x + ux * 20 + px * 26;
+          const endY = toRef.y + uy * 20 + py * 26;
 
           // Pass arrowIndex=0 so this short local arrow gets a clean,
           // unexaggerated curve rather than the stacked-arrow offset
           path = arrowPath(
-            toRef.x, toRef.y,
+            toRef.x + ux * 10 + px * 12,
+            toRef.y + uy * 10 + py * 12,
             endX, endY,
             0
           );
