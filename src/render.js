@@ -895,13 +895,22 @@ function render(ast, horizontal) {
           );
     effectiveArrows.forEach(
       (arrow, ai) => {
+
+        if (!arrow.from || !arrow.to) {
+         console.warn(
+            '[mechlang] skipping malformed arrow with missing endpoint'
+          );
+          return;
+        }
+
         const fromRef =
-          resolveAnchor(
+           resolveAnchor(
             arrow.from,
             positions[si],
             semanticStep,
             'from'
           );
+
         const toRef =
           resolveAnchor(
             arrow.to,
@@ -909,47 +918,74 @@ function render(ast, horizontal) {
             semanticStep,
             'to'
           );
+
         if (!fromRef || !toRef) return;
+
         let path;
 
-        if (arrow.inferenceType === 'leaving') {
+        if (
+          arrow.inferenceType === 'leaving'
+        ) {
 
-          const dx = toRef.x - fromRef.x;
-          const dy = toRef.y - fromRef.y;
-          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          const dx =
+            toRef.x - fromRef.x;
 
-          // Unit vector along the bond (C → leaving atom)
-          const ux = dx / len;
-          const uy = dy / len;
+          const dy =
+            toRef.y - fromRef.y;
 
-          // Perpendicular unit vector (counter-clockwise rotation)
-          // For a left-to-right bond this points downward in SVG,
-          // which is the conventional direction for a leaving-group arrow
-          const px = -uy;
-          const py =  ux;
+          const len =
+            Math.sqrt(
+              dx * dx +
+              dy * dy
+            ) || 1;
 
-          // Land 40px past the leaving atom along the departure axis
-          // and 20px off the bond axis so the curve is clearly separate
-          const endX = toRef.x + ux * 20 + px * 26;
-          const endY = toRef.y + uy * 20 + py * 26;
+          const ux =
+            dx / len;
 
-          // Pass arrowIndex=0 so this short local arrow gets a clean,
-          // unexaggerated curve rather than the stacked-arrow offset
-          path = arrowPath(
-            toRef.x + ux * 10 + px * 12,
-            toRef.y + uy * 10 + py * 12,
-            endX, endY,
-            0
-          );
+          const uy =
+            dy / len;
+
+          const px =
+            -uy;
+
+          const py =
+            uy = dx / len;
+
+          const endX =
+            toRef.x +
+            ux * 20 +
+            px * 26;
+
+          const endY =
+            toRef.y +
+            uy * 20 +
+            py * 26;
+
+          path =
+            arrowPath(
+              toRef.x +
+              ux * 10 +
+              px * 12,
+
+              toRef.y +
+              uy * 10 +
+              py * 12,
+
+              endX,
+              endY,
+              0
+            );
 
         } else {
-          path = arrowPath(
-            fromRef.x,
-            fromRef.y,
-            toRef.x,
-            toRef.y,
-            ai
-          );
+
+          path =
+            arrowPath(
+              fromRef.x,
+              fromRef.y,
+              toRef.x,
+              toRef.y,
+              ai
+            );
         }
 
         body += `
@@ -961,8 +997,7 @@ function render(ast, horizontal) {
             marker-end="url(#arrowhead)"
           />
         `;
-      }
-    );
+
   });
   return `
     <svg
