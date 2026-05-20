@@ -910,30 +910,47 @@ function render(ast, horizontal) {
             'to'
           );
         if (!fromRef || !toRef) return;
-        let targetX = toRef.x;
-        let targetY = toRef.y;
         let path;
 
         if (arrow.inferenceType === 'leaving') {
-          const adjusted = offsetEndpoint(
-            fromRef.x, fromRef.y,
-            toRef.x,   toRef.y
-          );
+
+          const dx = toRef.x - fromRef.x;
+          const dy = toRef.y - fromRef.y;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+
+          // Unit vector along the bond (C → leaving atom)
+          const ux = dx / len;
+          const uy = dy / len;
+
+          // Perpendicular unit vector (counter-clockwise rotation)
+          // For a left-to-right bond this points downward in SVG,
+          // which is the conventional direction for a leaving-group arrow
+          const px = -uy;
+          const py =  ux;
+
+          // Land 40px past the leaving atom along the departure axis
+          // and 20px off the bond axis so the curve is clearly separate
+          const endX = toRef.x + ux * 40 + px * 20;
+          const endY = toRef.y + uy * 40 + py * 20;
+
+          // Pass arrowIndex=0 so this short local arrow gets a clean,
+          // unexaggerated curve rather than the stacked-arrow offset
           path = arrowPath(
             fromRef.x, fromRef.y,
-            adjusted.x, adjusted.y,
+            endX, endY,
+            0
+          );
+
+        } else {
+          path = arrowPath(
+            fromRef.x,
+            fromRef.y,
+            toRef.x,
+            toRef.y,
             ai
           );
-        } else {
-          path =
-            arrowPath(
-              fromRef.x,
-              fromRef.y,
-              targetX,
-              targetY,
-              ai
-            );
         }
+
         body += `
           <path
             d="${path}"
