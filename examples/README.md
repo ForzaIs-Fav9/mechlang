@@ -16,6 +16,28 @@ Demonstrates:
 
 This example represents the intended “happy path” for users.
 
+### transform_test.mech
+
+The canonical semantic-transform example for v0.15.
+
+Demonstrates:
+- `transform {}` blocks
+- Automatic curved-arrow inference
+- Heuristic product inference
+- Product rendering
+- Leaving-group departure rendering
+
+## Semantic Diagnostics Examples
+
+### transform_warning_test.mech
+
+A small semantic warning example.
+
+Used to test:
+- Invalid transform detection
+- Graceful warning output
+- Non-fatal rendering behavior
+
 ## Robustness Examples
 
 ### sn2_alt.mech
@@ -27,7 +49,40 @@ Used to test:
 - Anchor resolution flexibility
 - Renderer stability under variation
 
-These files are not separate specifications, but stress tests of the same semantics.
+### persistence_test.mech
+
+A multi-step example demonstrating `persist:` behavior.
+
+Used to test:
+- Species carry-forward
+- Step-local rendering
+- Multi-step consistency
+
+### sn1_steps.mech
+
+A step-wise SN1-style example.
+
+Used to test:
+- Multi-step sequencing
+- Persistent intermediates
+- Step-separated arrow flow
+
+### sn2_steps.mech
+
+A step-wise SN2 example.
+
+Used to test:
+- Step-aware arrow resolution
+- Multi-step layout stability
+
+### double_bond_test.mech
+
+A double-bond layout example.
+
+Used to test:
+- `C=C` and `C=O` rendering
+- Bond order handling
+- Label aliasing for duplicated atoms
 
 ## Notes
 
