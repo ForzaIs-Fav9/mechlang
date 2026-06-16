@@ -1,0 +1,49 @@
+```gitignore
+# =============================================================================
+# MechLang .gitignore
+# =============================================================================
+
+# Dependencies
+node_modules/
+
+# Generated SVG outputs
+out/
+
+# macOS
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage reports
+coverage/
+
+# Build artifacts
+dist/
+
+# AI tooling
+.claude/
+.codex/
+.cursor/
+.aider/
+
+# OS generated files
+Thumbs.db
+
+# Windows
+Desktop.ini
+```
