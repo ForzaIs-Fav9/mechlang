@@ -949,7 +949,7 @@ function render(ast, horizontal) {
             -uy;
 
           const py =
-            uy = dx / len;
+            dx / len;
 
           const endX =
             toRef.x +
@@ -998,6 +998,7 @@ function render(ast, horizontal) {
           />
         `;
 
+  });
   });
   return `
     <svg
