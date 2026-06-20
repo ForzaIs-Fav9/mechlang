@@ -139,7 +139,7 @@ step {
     `);
 
     try {
-      execSync(`node src/render.js ${tempMech}`, {
+      execSync(`node src/cli.js ${tempMech}`, {
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe']
       });
@@ -174,7 +174,7 @@ step {
     `);
 
     try {
-      const result = execSync(`node src/render.js ${tempMech} 2>&1`, {
+      const result = execSync(`node src/cli.js ${tempMech} 2>&1`, {
         encoding: 'utf8'
       });
 
@@ -213,7 +213,7 @@ step {
     `);
 
     try {
-      execSync(`node src/render.js ${tempMech}`, {
+      execSync(`node src/cli.js ${tempMech}`, {
         encoding: 'utf8',
         stdio: ['pipe', 'pipe', 'pipe']
       });

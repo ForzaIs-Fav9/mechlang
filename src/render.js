@@ -1,6 +1,3 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import path from 'path';
-import { parseMechlang } from './parse.js';
 import { moleculeRegistry } from './molecules.js';
 import {
   validateTransforms,
@@ -20,18 +17,6 @@ const STEP_X_ORIGIN = 120;
 const PADDING = 80;
 
 let LABEL_BOXES = [];
-
-const args = process.argv.slice(2);
-const mechFile = args.find(a => !a.startsWith('--'));
-const layoutHorizontal = args.includes('--layout=horizontal');
-
-if (!mechFile) {
-  console.error('Usage: node src/render.js <file.mech> [--layout=horizontal]');
-  process.exit(1);
-}
-
-const source = readFileSync(mechFile, 'utf8');
-const ast = parseMechlang(source);
 
 function resolveMol(alias, step) {
   const molKey = step.species[alias];
@@ -820,7 +805,7 @@ function renderArrow(
   `;
 }
 
-function render(ast, horizontal) {
+export function render(ast, horizontal) {
   LABEL_BOXES = [];
   const renderableSteps =
     ast.steps.map(buildRenderableStep);
@@ -1010,30 +995,3 @@ function render(ast, horizontal) {
   `;
 }
 
-const svg =
-  render(
-    ast,
-    layoutHorizontal
-  );
-
-const baseName = path.basename(
-  mechFile,
-  '.mech'
-);
-
-const suffix =
-  layoutHorizontal
-    ? '.horizontal.svg'
-    : '.svg';
-
-const out =
-  `out/${baseName}${suffix}`;
-
-mkdirSync(
-  'out',
-  { recursive: true }
-);
-
-writeFileSync(out, svg);
-
-console.log(`Rendered → ${out}`);
