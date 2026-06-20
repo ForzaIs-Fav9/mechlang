@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import { parseMechlang } from './parse.js';
+import { compile } from './compile.js';
 import { render } from './render.js';
 
 const args = process.argv.slice(2);
@@ -14,8 +15,9 @@ if (!mechFile) {
 
 const source = readFileSync(mechFile, 'utf8');
 const ast = parseMechlang(source);
+const mechanism = compile(ast);
 
-const svg = render(ast, layoutHorizontal);
+const svg = render(mechanism, layoutHorizontal);
 
 const baseName = path.basename(mechFile, '.mech');
 const suffix = layoutHorizontal ? '.horizontal.svg' : '.svg';

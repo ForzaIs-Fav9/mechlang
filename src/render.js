@@ -1,12 +1,4 @@
 import { moleculeRegistry } from './molecules.js';
-import {
-  validateTransforms,
-  inferArrowsFromTransforms
-} from './semantic-engine.js';
-
-import {
-  inferProducts
-} from './product-engine.js';
 
 const STEP_Y_GAP = 240;
 const STEP_X_GAP = 260;
@@ -171,35 +163,6 @@ function getOrderedAliases(
     .map(entity => entity.alias);
 }
 
-function buildRenderableStep(step) {
-
-  const renderedStep = {
-    ...step,
-    species: {
-      ...step.species
-    }
-  };
-
-  const inference =
-    inferProducts(step);
-
-  if (!inference.inferred) {
-    return renderedStep;
-  }
-
-  inference.products.forEach(
-    (product, index) => {
-
-      const alias =
-        `inferred_${index}`;
-
-      renderedStep.species[alias] =
-        product;
-    }
-  );
-
-  return renderedStep;
-}
 
 function buildRenderEntities(step) {
 
@@ -805,17 +768,14 @@ function renderArrow(
   `;
 }
 
-export function render(ast, horizontal) {
+export function render(mechanism, horizontal) {
   const labelBoxes = [];
-  const renderableSteps =
-    ast.steps.map(buildRenderableStep);
+  const steps = mechanism.steps;
   const laneMap =
-    buildLaneMap({
-      steps: renderableSteps
-    });
+    buildLaneMap({ steps });
   const positions =
     computePositions(
-      renderableSteps,
+      steps,
       horizontal,
       laneMap
     );
@@ -839,8 +799,7 @@ export function render(ast, horizontal) {
       </marker>
     </defs>
   `;
-  renderableSteps.forEach((step, si) => {
-    validateTransforms(step);
+  steps.forEach((step, si) => {
     const entities =
       buildRenderEntities(step);
     const aliases =
@@ -859,27 +818,10 @@ export function render(ast, horizontal) {
         labelBoxes
       );
     }
-    const semanticStep = {
-      ...step,
-      species:
-        Object.fromEntries(
-          Object.entries(
-            step.species
-          ).filter(
-            ([alias]) =>
-              !alias.startsWith(
-                'inferred_'
-              )
-          )
-        )
+    const arrowStep = {
+      species: step.originalSpecies
     };
-    const effectiveArrows =
-      step.arrows.length > 0
-        ? step.arrows
-        : inferArrowsFromTransforms(
-            semanticStep
-          );
-    effectiveArrows.forEach(
+    step.arrows.forEach(
       (arrow, ai) => {
 
         if (!arrow.from || !arrow.to) {
@@ -893,7 +835,7 @@ export function render(ast, horizontal) {
            resolveAnchor(
             arrow.from,
             positions[si],
-            semanticStep,
+            arrowStep,
             'from'
           );
 
@@ -901,7 +843,7 @@ export function render(ast, horizontal) {
           resolveAnchor(
             arrow.to,
             positions[si],
-            semanticStep,
+            arrowStep,
             'to'
           );
 
