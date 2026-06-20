@@ -16,7 +16,6 @@ const STEP_Y_ORIGIN = 140;
 const STEP_X_ORIGIN = 120;
 const PADDING = 80;
 
-let LABEL_BOXES = [];
 
 function resolveMol(alias, step) {
   const molKey = step.species[alias];
@@ -372,7 +371,7 @@ function computeCanvas(positions) {
   };
 }
 
-function renderMolecule(alias, step, ox, oy) {
+function renderMolecule(alias, step, ox, oy, labelBoxes) {
 
   const molKey = step.species[alias];
   const mol = molKey
@@ -478,7 +477,7 @@ function renderMolecule(alias, step, ox, oy) {
       height: 18
     };
 
-    LABEL_BOXES.push(box);
+    labelBoxes.push(box);
 
     svg += `
       <rect
@@ -563,7 +562,8 @@ function collides(
   cx,
   cy,
   x2,
-  y2
+  y2,
+  labelBoxes
 ) {
 
   for (
@@ -582,7 +582,7 @@ function collides(
       t
     );
 
-    for (const b of LABEL_BOXES) {
+    for (const b of labelBoxes) {
 
       if (
         p.x >= b.x &&
@@ -806,7 +806,7 @@ function renderArrow(
 }
 
 export function render(ast, horizontal) {
-  LABEL_BOXES = [];
+  const labelBoxes = [];
   const renderableSteps =
     ast.steps.map(buildRenderableStep);
   const laneMap =
@@ -855,7 +855,8 @@ export function render(ast, horizontal) {
         alias,
         step,
         p.x,
-        p.y
+        p.y,
+        labelBoxes
       );
     }
     const semanticStep = {
