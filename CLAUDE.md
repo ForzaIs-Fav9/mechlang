@@ -17,8 +17,8 @@ node tests/semantic-engine.test.js
 node tests/product-engine.test.js
 
 # Render a .mech file to SVG (output in out/)
-node src/render.js examples/sn2.mech
-node src/render.js examples/sn2_steps.mech --layout=horizontal
+node src/cli.js examples/sn2.mech
+node src/cli.js examples/sn2_steps.mech --layout=horizontal
 ```
 
 No build step. No dependencies to install (`npm install` is a no-op — zero runtime deps). Node.js >= 18, ES Modules.

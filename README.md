@@ -304,7 +304,7 @@ node tests/product-engine.test.js
 Render example mechanisms:
 
 ```bash
-node src/render.js examples/sn2.mech
+node src/cli.js examples/sn2.mech
 ```
 
 ---

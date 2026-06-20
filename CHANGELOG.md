@@ -181,7 +181,7 @@ Transform inference acts as a fallback when explicit arrows are absent.
 ### Verified
 
 ```bash
-node src/render.js examples/transform_test.mech
-node src/render.js examples/transform_warning_test.mech
+node src/cli.js examples/transform_test.mech
+node src/cli.js examples/transform_warning_test.mech
 node tests/semantic-engine.test.js
 ```

@@ -118,7 +118,7 @@ export function inferProducts(step): {
 
 ### Invocation
 ```bash
-node src/render.js <file.mech> [--layout=horizontal]
+node src/cli.js <file.mech> [--layout=horizontal]
 ```
 
 ### Output
