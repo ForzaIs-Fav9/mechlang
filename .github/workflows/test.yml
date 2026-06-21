@@ -36,5 +36,5 @@ jobs:
       - name: Verify renderer
         run: |
           for f in examples/*.mech; do
-            node src/render.js "$f"
+            node src/cli.js "$f"
           done

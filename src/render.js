@@ -1,15 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import path from 'path';
-import { parseMechlang } from './parse.js';
 import { moleculeRegistry } from './molecules.js';
-import {
-  validateTransforms,
-  inferArrowsFromTransforms
-} from './semantic-engine.js';
-
-import {
-  inferProducts
-} from './product-engine.js';
 
 const STEP_Y_GAP = 240;
 const STEP_X_GAP = 260;
@@ -19,19 +8,6 @@ const STEP_Y_ORIGIN = 140;
 const STEP_X_ORIGIN = 120;
 const PADDING = 80;
 
-let LABEL_BOXES = [];
-
-const args = process.argv.slice(2);
-const mechFile = args.find(a => !a.startsWith('--'));
-const layoutHorizontal = args.includes('--layout=horizontal');
-
-if (!mechFile) {
-  console.error('Usage: node src/render.js <file.mech> [--layout=horizontal]');
-  process.exit(1);
-}
-
-const source = readFileSync(mechFile, 'utf8');
-const ast = parseMechlang(source);
 
 function resolveMol(alias, step) {
   const molKey = step.species[alias];
@@ -187,35 +163,6 @@ function getOrderedAliases(
     .map(entity => entity.alias);
 }
 
-function buildRenderableStep(step) {
-
-  const renderedStep = {
-    ...step,
-    species: {
-      ...step.species
-    }
-  };
-
-  const inference =
-    inferProducts(step);
-
-  if (!inference.inferred) {
-    return renderedStep;
-  }
-
-  inference.products.forEach(
-    (product, index) => {
-
-      const alias =
-        `inferred_${index}`;
-
-      renderedStep.species[alias] =
-        product;
-    }
-  );
-
-  return renderedStep;
-}
 
 function buildRenderEntities(step) {
 
@@ -387,7 +334,7 @@ function computeCanvas(positions) {
   };
 }
 
-function renderMolecule(alias, step, ox, oy) {
+function renderMolecule(alias, step, ox, oy, labelBoxes) {
 
   const molKey = step.species[alias];
   const mol = molKey
@@ -493,7 +440,7 @@ function renderMolecule(alias, step, ox, oy) {
       height: 18
     };
 
-    LABEL_BOXES.push(box);
+    labelBoxes.push(box);
 
     svg += `
       <rect
@@ -578,7 +525,8 @@ function collides(
   cx,
   cy,
   x2,
-  y2
+  y2,
+  labelBoxes
 ) {
 
   for (
@@ -597,7 +545,7 @@ function collides(
       t
     );
 
-    for (const b of LABEL_BOXES) {
+    for (const b of labelBoxes) {
 
       if (
         p.x >= b.x &&
@@ -820,17 +768,14 @@ function renderArrow(
   `;
 }
 
-function render(ast, horizontal) {
-  LABEL_BOXES = [];
-  const renderableSteps =
-    ast.steps.map(buildRenderableStep);
+export function render(mechanism, horizontal) {
+  const labelBoxes = [];
+  const steps = mechanism.steps;
   const laneMap =
-    buildLaneMap({
-      steps: renderableSteps
-    });
+    buildLaneMap({ steps });
   const positions =
     computePositions(
-      renderableSteps,
+      steps,
       horizontal,
       laneMap
     );
@@ -854,8 +799,7 @@ function render(ast, horizontal) {
       </marker>
     </defs>
   `;
-  renderableSteps.forEach((step, si) => {
-    validateTransforms(step);
+  steps.forEach((step, si) => {
     const entities =
       buildRenderEntities(step);
     const aliases =
@@ -870,30 +814,14 @@ function render(ast, horizontal) {
         alias,
         step,
         p.x,
-        p.y
+        p.y,
+        labelBoxes
       );
     }
-    const semanticStep = {
-      ...step,
-      species:
-        Object.fromEntries(
-          Object.entries(
-            step.species
-          ).filter(
-            ([alias]) =>
-              !alias.startsWith(
-                'inferred_'
-              )
-          )
-        )
+    const arrowStep = {
+      species: step.originalSpecies
     };
-    const effectiveArrows =
-      step.arrows.length > 0
-        ? step.arrows
-        : inferArrowsFromTransforms(
-            semanticStep
-          );
-    effectiveArrows.forEach(
+    step.arrows.forEach(
       (arrow, ai) => {
 
         if (!arrow.from || !arrow.to) {
@@ -907,7 +835,7 @@ function render(ast, horizontal) {
            resolveAnchor(
             arrow.from,
             positions[si],
-            semanticStep,
+            arrowStep,
             'from'
           );
 
@@ -915,7 +843,7 @@ function render(ast, horizontal) {
           resolveAnchor(
             arrow.to,
             positions[si],
-            semanticStep,
+            arrowStep,
             'to'
           );
 
@@ -1010,30 +938,3 @@ function render(ast, horizontal) {
   `;
 }
 
-const svg =
-  render(
-    ast,
-    layoutHorizontal
-  );
-
-const baseName = path.basename(
-  mechFile,
-  '.mech'
-);
-
-const suffix =
-  layoutHorizontal
-    ? '.horizontal.svg'
-    : '.svg';
-
-const out =
-  `out/${baseName}${suffix}`;
-
-mkdirSync(
-  'out',
-  { recursive: true }
-);
-
-writeFileSync(out, svg);
-
-console.log(`Rendered → ${out}`);

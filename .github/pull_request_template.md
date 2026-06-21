@@ -14,7 +14,8 @@
 ## Checklist
 
 ### Code
-- [ ] Tested with `node src/render.js examples/<file>.mech`
+- [ ] `npm test` passes
+- [ ] Tested with `node src/cli.js examples/<file>.mech`
 - [ ] Output SVG looks correct visually
 - [ ] No regressions on existing examples (sn2, sn1, etc.)
 

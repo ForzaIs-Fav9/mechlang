@@ -8,12 +8,41 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Planned (v0.16+)
+### Planned (v0.17+)
 
 * transition-state construction
 * intermediate-state representation
 * multi-step reaction synthesis
 * resonance and state propagation
+
+---
+
+## [0.16.0] - 2026-06-21
+
+### Changed
+
+- Extracted CLI entrypoint into `src/cli.js` — render.js is now a pure importable module
+- Introduced `compile.js` pipeline orchestrator — semantic validation, arrow inference, and product inference are orchestrated before rendering
+- Eliminated `LABEL_BOXES` global mutable state from renderer (passed as parameter instead)
+- `render.js` no longer imports semantic-engine or product-engine — receives pre-compiled mechanism data
+
+### Architecture
+
+Pipeline is now:
+
+```text
+.mech source
+    ↓
+  cli.js          → orchestrates I/O
+    ↓
+  parse.js        → AST
+    ↓
+  compile.js      → semantic validation + arrow inference + product inference
+    ↓
+  render.js       → SVG string (pure function, no I/O)
+    ↓
+  out/*.svg
+```
 
 ---
 
@@ -181,7 +210,7 @@ Transform inference acts as a fallback when explicit arrows are absent.
 ### Verified
 
 ```bash
-node src/render.js examples/transform_test.mech
-node src/render.js examples/transform_warning_test.mech
+node src/cli.js examples/transform_test.mech
+node src/cli.js examples/transform_warning_test.mech
 node tests/semantic-engine.test.js
 ```

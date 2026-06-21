@@ -26,7 +26,7 @@ body:
       label: Steps to Reproduce
       description: Walk us through exactly how to trigger this bug.
       value: |
-        1. Run: `node src/render.js examples/<file>.mech`
+        1. Run: `node src/cli.js examples/<file>.mech`
         2. 
         3. 
       render: bash

@@ -6,7 +6,7 @@ import path from 'path';
 const TEST_OUT = 'out/_test_render';
 
 function run(args) {
-  return execSync(`node src/render.js ${args}`, {
+  return execSync(`node src/cli.js ${args}`, {
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe']
   });
