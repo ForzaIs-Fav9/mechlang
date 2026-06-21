@@ -39,46 +39,30 @@ The project sits at the intersection of chemistry, programming language design, 
 
 ## Architecture
 
-mechlang now follows a layered compiler-style architecture:
-
-```text
-parse.js
-  ↓
-semantic-engine.js
-  ↓
-product-engine.js
-  ↓
-render.js
-```
-
-This separation allows chemistry semantics, validation, product inference, and rendering to evolve independently.
-
----
-
-## How it works
-
-mechlang follows a compiler-style pipeline:
+mechlang follows a layered compiler-style pipeline:
 
 ```text
 .mech source
     ↓
-parse.js
+  cli.js              → orchestrates I/O
     ↓
-semantic-engine.js
+  parse.js            → AST
     ↓
-product-engine.js
+  compile.js          → semantic validation + arrow inference + product inference
+    ↓                      (uses semantic-engine.js and product-engine.js)
+  render.js           → SVG string (pure function, no I/O)
     ↓
-render.js
-    ↓
-out/*.svg
+  out/*.svg
 ```
 
-* `parse.js` handles syntax only
-* `semantic-engine.js` handles chemistry reasoning and arrow inference
-* `product-engine.js` handles heuristic product inference
-* `render.js` handles visualization only
+* `cli.js` handles file I/O and argument parsing
+* `parse.js` handles syntax only — produces the AST
+* `compile.js` orchestrates chemistry reasoning: semantic validation, arrow inference, product inference
+* `semantic-engine.js` validates transforms and infers curved arrows
+* `product-engine.js` performs heuristic product synthesis
+* `render.js` handles visualization only — receives pre-compiled mechanism data
 
-The renderer is driven entirely by the AST, the semantic engine, and inferred products — not by hardcoded geometry.
+The renderer is driven entirely by compiled mechanism data — not by hardcoded geometry. Chemistry reasoning never lives in the renderer.
 
 ---
 

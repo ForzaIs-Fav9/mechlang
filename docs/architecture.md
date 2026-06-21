@@ -9,23 +9,25 @@ responsibilities of each component in the pipeline.
 ```text
 .mech source file
       ↓
+  cli.js          → file I/O, argument parsing
+      ↓
   parse.js        → AST (with persistence post-pass)
       ↓
-semantic-engine.js → semantic annotations + inferred arrows
-      ↓
-product-engine.js → inferred products
-      ↓
-  render.js       → SVG string
+  compile.js      → orchestrates semantic validation + arrow inference + product inference
+      ↓               (uses semantic-engine.js and product-engine.js)
+  render.js       → SVG string (pure function, no I/O)
       ↓
   out/*.svg       → browser / export
 ```
 
 The pipeline is strictly layered.
 
+- `cli.js` handles I/O and wires the pipeline
 - `parse.js` handles syntax only
-- `semantic-engine.js` handles chemistry reasoning and inference
-- `product-engine.js` handles heuristic product synthesis
-- `render.js` handles visualization only
+- `compile.js` orchestrates chemistry reasoning (delegates to semantic-engine and product-engine)
+- `semantic-engine.js` validates transforms and infers arrows
+- `product-engine.js` performs heuristic product synthesis
+- `render.js` handles visualization only — receives pre-compiled mechanism data
 
 No component reaches backward across layers.
 
@@ -113,9 +115,24 @@ Current supported inference patterns:
 The product engine is deterministic and heuristic-driven.
 It is intentionally not yet a full graph-rewrite chemistry system.
 
+### `src/compile.js`
+
+Orchestrates semantic validation, arrow inference, and product inference.
+Consumes the raw AST from `parse.js` and produces a compiled mechanism
+with fully resolved species, arrows, and products ready for rendering.
+
+Responsibilities:
+- Run `validateTransforms()` on each step
+- Infer arrows from transforms when no explicit arrows exist
+- Infer products and merge them into the species map
+- Produce a compiled representation consumed by `render.js`
+
+The compile step never renders SVG or performs I/O.
+
 ### `src/render.js`
 
-Consumes the AST, semantic annotations, and inferred products. Produces a complete SVG string.
+Consumes compiled mechanism data. Produces a complete SVG string.
+Exported as `render(mechanism, horizontal)` — a pure function with no I/O.
 The renderer is fully blind to persistence mechanics — it sees only a
 fully resolved species map per step.
 
@@ -127,7 +144,6 @@ Responsibilities:
 - Render inferred products
 - Render mechanism arrows with bond midpoint resolution
 - Compute dynamic canvas dimensions
-- Write output to `out/`
 
 ---
 

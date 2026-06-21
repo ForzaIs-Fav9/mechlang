@@ -112,16 +112,54 @@ export function inferProducts(step): {
 
 ---
 
+## Compile Contract (compile.js)
+
+`compile.js` exports one function:
+```js
+export function compile(ast): CompiledMechanism
+```
+
+### Compiled Mechanism Shape
+```js
+{
+  steps: CompiledStep[]
+}
+
+CompiledStep {
+  species:          { [alias: string]: string }   // includes inferred products as inferred_0, inferred_1, ...
+  originalSpecies:  { [alias: string]: string }   // original species without inferred products
+  arrows:           Arrow[]                       // explicit or inferred
+  transforms:       Transform[]
+  mechanism:        string | null                 // e.g. "SN2" if inferred
+  diagnostics:      Array<{ type: string, message: string }>
+}
+```
+
+### Compile Guarantees
+- Deterministic output for identical AST input
+- Calls `validateTransforms()` — emits warnings only, never throws
+- Infers arrows from transforms when `step.arrows` is empty
+- Infers products and merges into species as `inferred_0`, `inferred_1`, ...
+- Never performs I/O or generates SVG
+- Never mutates the input AST
+
+---
+
 ## Renderer Contract (render.js)
 
-`render.js` is a CLI entry point, not an importable module.
+`render.js` exports a pure function — it performs no I/O and has no side effects.
+CLI orchestration (file reading, writing, directory creation) lives in `src/cli.js`.
 
-### Invocation
+```js
+export function render(mechanism, horizontal): string
+```
+
+### Invocation (via CLI)
 ```bash
 node src/cli.js <file.mech> [--layout=horizontal]
 ```
 
-### Output
+### Output (managed by cli.js)
 - Writes SVG to `out/<filename>.svg`
 - With `--layout=horizontal`: `out/<filename>.horizontal.svg`
 - Creates `out/` directory if absent

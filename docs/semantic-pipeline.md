@@ -27,15 +27,17 @@ Semantic layers must remain deterministic, testable, and independent from SVG ge
 ```text
 .mech source
     ↓
-parse.js
+cli.js              → I/O orchestration
     ↓
-semantic-engine.js
+parse.js            → AST
     ↓
-product-engine.js
+compile.js          → orchestrates semantic layers:
+    ├── semantic-engine.js  → validation + arrow inference
+    └── product-engine.js   → product synthesis
     ↓
-render.js
+render.js           → SVG (pure function, no I/O)
     ↓
-SVG
+out/*.svg
 ```
 
 ---
