@@ -1,19 +1,4 @@
-const SPECIES_RULES = {
-
-  // ───────────────────────────────────────────────────────────────────────
-  // Nucleophiles
-  // ───────────────────────────────────────────────────────────────────────
-
-  'CN-': {
-    category: 'nucleophile',
-    role: 'cyanide'
-  },
-
-  'OH-': {
-    category: 'nucleophile',
-    role: 'hydroxide'
-  }
-};
+import { MoleculeGraph } from './molecule-graph.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Species classification
@@ -29,44 +14,53 @@ function classifySpecies(mol) {
   };
 
   // ───────────────────────────────────────────────────────────────────────
-  // Rule-based species semantics
+  // Structural classification via MoleculeGraph
   // ───────────────────────────────────────────────────────────────────────
 
-  if (
-    SPECIES_RULES[mol]
-  ) {
+  let graph;
+  try { graph = MoleculeGraph.fromRegistry(mol); }
+  catch { return info; }
 
-    Object.assign(
-      info,
-      SPECIES_RULES[mol]
-    );
+  // ───────────────────────────────────────────────────────────────────────
+  // Nucleophile detection by charge and topology
+  // ───────────────────────────────────────────────────────────────────────
+
+  if (graph.charge === -1) {
+
+    if (graph.hasBond('N', 'C')) {
+      info.category = 'nucleophile';
+      info.role = 'cyanide';
+    }
+
+    if (
+      graph.getAtom('O') &&
+      graph.atomCount() === 1
+    ) {
+      info.category = 'nucleophile';
+      info.role = 'hydroxide';
+    }
   }
 
   // ───────────────────────────────────────────────────────────────────────
-  // Methyl halides
+  // Substrate detection by C-X bond topology
   // ───────────────────────────────────────────────────────────────────────
 
-  if (
-    mol.startsWith('CH3-')
-  ) {
+  if (graph.hasBond('C', 'Br')) {
+    info.category = 'substrate';
+    info.role = 'methyl-halide';
+    info.leavingGroup = 'Br';
+  }
 
-    if (mol.endsWith('Br')) {
-      info.category = 'substrate';
-      info.role = 'methyl-halide';
-      info.leavingGroup = 'Br';
-    }
+  if (graph.hasBond('C', 'Cl')) {
+    info.category = 'substrate';
+    info.role = 'methyl-halide';
+    info.leavingGroup = 'Cl';
+  }
 
-    if (mol.endsWith('Cl')) {
-      info.category = 'substrate';
-      info.role = 'methyl-halide';
-      info.leavingGroup = 'Cl';
-    }
-
-    if (mol.endsWith('I')) {
-      info.category = 'substrate';
-      info.role = 'methyl-halide';
-      info.leavingGroup = 'I';
-    }
+  if (graph.hasBond('C', 'I')) {
+    info.category = 'substrate';
+    info.role = 'methyl-halide';
+    info.leavingGroup = 'I';
   }
 
   return info;
