@@ -28,6 +28,7 @@ export class MoleculeGraph {
     this.charge = charge;
   }
 
+ feature/molecule-graph-queries
   getAtom(id) {
     return this.atoms.find(a => a.id === id) || null;
   }
@@ -66,6 +67,7 @@ export class MoleculeGraph {
     return this.bonds.length;
   }
 
+ main
   static fromRegistry(name) {
     const entry = moleculeRegistry[name];
 

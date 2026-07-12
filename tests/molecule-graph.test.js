@@ -139,6 +139,7 @@ assert.strictEqual(carbonylBond.order, 2);
 console.log('✓ Bond from/to/order structure correct');
 
 // ─────────────────────────────────────────────────────────────────────────────
+ feature/molecule-graph-queries
 // getAtom: lookup existing atom
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -314,6 +315,7 @@ console.log('✓ atomCount returns correct count');
 console.log('✓ bondCount returns correct count');
 
 // ─────────────────────────────────────────────────────────────────────────────
+ main
 // Error case: unknown registry key
 // ─────────────────────────────────────────────────────────────────────────────
 
