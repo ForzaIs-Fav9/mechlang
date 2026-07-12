@@ -128,7 +128,40 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 
 ---
 
-## Phase 6 — Reaction-State Construction (v0.16)
+## Phase 5.5 — MoleculeGraph (v0.17) ✅ Completed
+
+### G.1 — MoleculeGraph Core ✅
+- `MoleculeGraph` class with read-only topology abstraction
+- `fromRegistry()` factory constructs from molecule registry
+- Properties: `name`, `atoms`, `bonds`, `charge`
+
+### G.2 — Read-Only Query API ✅
+- `getAtom()`, `neighbors()`, `hasBond()`, `getBond()`
+- `bondOrder()`, `atomCount()`, `bondCount()`
+- Comprehensive test suite (19 assertions)
+
+### G.3 — Semantic Engine Migration ✅
+- `validateTransforms()` and `inferArrowsFromTransforms()` consume `graphMap`
+- Bond validation via `hasBond()` instead of direct registry traversal
+- Nucleophile detection via `charge` + `name` queries
+
+### G.4 — Product Engine Migration ✅
+- Species classification via graph topology (`hasBond()`, `getAtom()`, `atomCount()`, `charge`)
+- Eliminated direct registry key-matching patterns
+- Data-driven SN2 rules operate on graph queries
+
+### G.5 — Compile Ownership ✅
+- `compile.js` is sole owner of MoleculeGraph construction
+- Builds `graphMap` per step (one graph per unique molecule, Map-deduplicated)
+- Engines receive graphMap as read-only dependency
+
+### G.6 — Renderer Cleanup ✅
+- Removed dead code: `sampleQuadratic`, `collides`, `offsetEndpoint`, `renderArrow`
+- Renderer confirmed topology-blind — no graph knowledge
+
+---
+
+## Phase 6 — Reaction-State Construction (next)
 
 ### R.1 — Reaction-State Representation
 - Structured before/transition/after states

@@ -34,14 +34,19 @@ Strictly layered compiler-style pipeline — no component reaches backward:
 | Layer | Responsibility | Must NOT |
 |---|---|---|
 | `cli.js` | File I/O, argument parsing, pipeline orchestration | Infer chemistry, render SVG |
-| `parse.js` | Tokenize, build AST, resolve `persist:` cross-step references | Infer chemistry, render SVG |
-| `compile.js` | Orchestrate semantic validation, arrow inference, product inference | Render SVG, perform I/O |
-| `semantic-engine.js` | Validate transforms, infer curved arrows from `form`/`break` ops | Render SVG, synthesize products |
-| `product-engine.js` | Heuristic product inference (SN2 substitution, leaving groups) | Render SVG, mutate molecular graphs |
-| `render.js` | SVG generation, layout, geometry (pure function, no I/O) | Infer chemistry, validate transforms, import semantic/product engines |
+| `parse.js` | Tokenize, build AST, resolve `persist:` cross-step references | Infer chemistry, render SVG, access MoleculeGraph |
+| `compile.js` | Construct MoleculeGraph instances, orchestrate semantic validation, arrow inference, product inference | Render SVG, perform I/O |
+| `molecule-graph.js` | Read-only graph abstraction over molecule topology (atoms, bonds, neighbors, queries) | Mutate state, render SVG, perform I/O |
+| `semantic-engine.js` | Validate transforms, infer curved arrows from `form`/`break` ops (consumes graphMap) | Render SVG, synthesize products, construct graphs |
+| `product-engine.js` | Heuristic product inference via graph topology queries (consumes graphMap) | Render SVG, construct graphs, mutate molecular graphs |
+| `render.js` | SVG generation, layout, geometry (pure function, no I/O) | Infer chemistry, validate transforms, access MoleculeGraph |
 | `molecules.js` | Static registry of molecule templates (atoms, bonds, charges, coords) | — |
 
 Key architectural rules:
+- `compile.js` is the sole owner of MoleculeGraph construction — one graph per unique molecule per step.
+- Engines receive `graphMap` (a `Map<string, MoleculeGraph>`) and use read-only query methods only.
+- The renderer has no knowledge of MoleculeGraph — it accesses `moleculeRegistry` directly for layout coordinates.
+- The parser has no knowledge of MoleculeGraph — it produces a pure AST.
 - Chemistry reasoning never lives in the renderer.
 - The parser never throws — it emits `console.warn` and degrades gracefully.
 - Arrow direction is always AST-derived, never geometry-derived.

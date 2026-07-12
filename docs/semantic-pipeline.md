@@ -29,13 +29,14 @@ Semantic layers must remain deterministic, testable, and independent from SVG ge
     ↓
 cli.js              → I/O orchestration
     ↓
-parse.js            → AST
+parse.js            → AST (no chemistry, no graph knowledge)
     ↓
-compile.js          → orchestrates semantic layers:
-    ├── semantic-engine.js  → validation + arrow inference
-    └── product-engine.js   → product synthesis
+compile.js          → constructs MoleculeGraph, orchestrates semantic layers:
+    │                  builds graphMap (one graph per unique molecule per step)
+    ├── semantic-engine.js  → validation + arrow inference (consumes graphMap)
+    └── product-engine.js   → product synthesis (consumes graphMap)
     ↓
-render.js           → SVG (pure function, no I/O)
+render.js           → SVG (pure function, no I/O, no graph knowledge)
     ↓
 out/*.svg
 ```
@@ -63,20 +64,22 @@ Output:
 
 ## semantic-engine.js
 
+Consumes `graphMap` from `compile.js`.
+
 Responsible for:
-- semantic transform validation
-- arrow inference
+- semantic transform validation via graph topology queries (`hasBond()`, `charge`)
+- arrow inference from transform semantics
 - semantic diagnostics
 
 Examples:
-- missing nucleophile warnings
-- invalid bond break warnings
-- inferred curved arrows
+- missing nucleophile warnings (detected via graph charge query)
+- invalid bond break warnings (detected via `hasBond()`)
+- inferred curved arrows (resolved via graph topology)
 
 Must NOT:
 - render SVG
 - synthesize products
-- mutate molecular graphs
+- construct MoleculeGraph instances
 
 Output:
 - semantic annotations
@@ -87,14 +90,17 @@ Output:
 
 ## product-engine.js
 
+Consumes `graphMap` from `compile.js`.
+
 Responsible for:
+- species classification via graph topology (`hasBond()`, `charge`, `atomCount()`, `getAtom()`)
 - inferred product synthesis
 - reaction-state output generation
 - deterministic heuristic chemistry inference
 
 Examples:
-- SN2 substitution products
-- leaving-group generation
+- SN2 substitution products (substrate detected via C-halide bond topology)
+- leaving-group generation (halide identified via graph structure)
 
 Must remain:
 - deterministic
@@ -104,6 +110,7 @@ Must remain:
 Must NOT:
 - generate SVG
 - mutate renderer state
+- construct MoleculeGraph instances
 
 Output:
 - inferred product molecule keys
@@ -165,7 +172,7 @@ MechLang currently prioritizes:
 over:
 - full chemistry simulation.
 
-Graph rewriting and molecular mutation are intentionally deferred until semantic boundaries stabilize.
+MoleculeGraph provides read-only topology queries. Full graph rewriting and molecular mutation are intentionally deferred until semantic boundaries stabilize further.
 
 ---
 

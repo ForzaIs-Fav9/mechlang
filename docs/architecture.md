@@ -9,25 +9,30 @@ responsibilities of each component in the pipeline.
 ```text
 .mech source file
       ↓
-  cli.js          → file I/O, argument parsing
+  cli.js              → file I/O, argument parsing
       ↓
-  parse.js        → AST (with persistence post-pass)
+  parse.js            → AST (with persistence post-pass)
       ↓
-  compile.js      → orchestrates semantic validation + arrow inference + product inference
-      ↓               (uses semantic-engine.js and product-engine.js)
-  render.js       → SVG string (pure function, no I/O)
+  compile.js          → constructs MoleculeGraph, orchestrates semantic validation +
+      ↓                   arrow inference + product inference
+      ├── molecule-graph.js  → read-only graph abstraction (topology queries)
+      ├── semantic-engine.js → validation + arrow inference (consumes graphMap)
+      └── product-engine.js  → product synthesis (consumes graphMap)
       ↓
-  out/*.svg       → browser / export
+  render.js           → SVG string (pure function, no I/O, no graph knowledge)
+      ↓
+  out/*.svg           → browser / export
 ```
 
 The pipeline is strictly layered.
 
 - `cli.js` handles I/O and wires the pipeline
-- `parse.js` handles syntax only
-- `compile.js` orchestrates chemistry reasoning (delegates to semantic-engine and product-engine)
-- `semantic-engine.js` validates transforms and infers arrows
-- `product-engine.js` performs heuristic product synthesis
-- `render.js` handles visualization only — receives pre-compiled mechanism data
+- `parse.js` handles syntax only — no chemistry, no graph knowledge
+- `compile.js` owns MoleculeGraph construction and orchestrates chemistry reasoning
+- `molecule-graph.js` provides read-only topology queries over molecule structure
+- `semantic-engine.js` validates transforms and infers arrows via graphMap
+- `product-engine.js` performs heuristic product synthesis via graphMap
+- `render.js` handles visualization only — receives pre-compiled mechanism data, no graph knowledge
 
 No component reaches backward across layers.
 
@@ -82,52 +87,86 @@ Each molecule entry contains:
 
 Coordinates are heuristic and template-driven. No chemistry inference.
 
-### `src/semantic-engine.js`
+### `src/molecule-graph.js`
 
-Consumes the parsed AST and performs chemistry-semantic reasoning.
+A read-only graph abstraction over molecule topology. Constructed exclusively
+by `compile.js` via `MoleculeGraph.fromRegistry(name)`.
 
-Responsibilities:
-- Infer curved-arrow electron flow from transform semantics
-- Validate semantic transform consistency
-- Emit compiler-style warnings for invalid semantic operations
-- Remain independent from SVG rendering
+Public query API:
+- `getAtom(id)` — returns atom object or null
+- `neighbors(id)` — returns connected atom IDs
+- `hasBond(a, b)` — boolean bond existence check
+- `getBond(a, b)` — returns bond object or null
+- `bondOrder(a, b)` — returns bond order or null
+- `atomCount()` — number of atoms
+- `bondCount()` — number of bonds
+- `static fromRegistry(name)` — factory, constructs from molecule registry
 
-Current supported inference patterns:
-- SN2 nucleophilic attack
-- Leaving-group departure
+Properties: `name`, `atoms`, `bonds`, `charge` (all read-only by convention).
 
-The semantic engine is deterministic and heuristic-driven.
-It is intentionally not yet a full graph-rewrite chemistry system.
-
-### `src/product-engine.js`
-
-Consumes the parsed AST plus semantic transform output and infers products.
-
-Responsibilities:
-- infer heuristic substitution products from transform operations
-- synthesize product molecule keys
-- remain independent from rendering
-
-Current supported inference patterns:
-- SN2 product synthesis
-- leaving-group emission
-
-The product engine is deterministic and heuristic-driven.
-It is intentionally not yet a full graph-rewrite chemistry system.
+Must NOT:
+- Mutate state after construction
+- Render SVG or perform I/O
+- Access layout coordinates (those remain in `moleculeRegistry` for the renderer)
 
 ### `src/compile.js`
 
-Orchestrates semantic validation, arrow inference, and product inference.
+Owns MoleculeGraph construction and orchestrates semantic reasoning.
 Consumes the raw AST from `parse.js` and produces a compiled mechanism
 with fully resolved species, arrows, and products ready for rendering.
 
 Responsibilities:
-- Run `validateTransforms()` on each step
+- Construct a `graphMap` (`Map<string, MoleculeGraph>`) per step — one graph per unique molecule
+- Pass `graphMap` to semantic-engine and product-engine
+- Run `validateTransforms(step, graphMap)` on each step
 - Infer arrows from transforms when no explicit arrows exist
 - Infer products and merge them into the species map
 - Produce a compiled representation consumed by `render.js`
 
 The compile step never renders SVG or performs I/O.
+It is the sole production code that constructs MoleculeGraph instances.
+
+### `src/semantic-engine.js`
+
+Consumes the step and a pre-built `graphMap` to perform chemistry-semantic reasoning.
+
+Responsibilities:
+- Validate semantic transform consistency using graph topology queries
+- Infer curved-arrow electron flow from transform semantics
+- Emit compiler-style warnings for invalid semantic operations
+- Remain independent from SVG rendering
+
+Current supported inference patterns:
+- SN2 nucleophilic attack (via `hasBond()`, `charge` queries)
+- Leaving-group departure (via `hasBond()` queries)
+
+Must NOT:
+- Construct MoleculeGraph instances
+- Render SVG
+- Synthesize products
+
+The semantic engine is deterministic and heuristic-driven.
+
+### `src/product-engine.js`
+
+Consumes the step and a pre-built `graphMap` to classify species and infer products.
+
+Responsibilities:
+- Classify species by graph topology (nucleophile/substrate detection via `hasBond()`, `charge`, `atomCount()`)
+- Infer heuristic substitution products from transform operations
+- Synthesize product molecule keys
+- Remain independent from rendering
+
+Current supported inference patterns:
+- SN2 product synthesis
+- Leaving-group emission
+
+Must NOT:
+- Construct MoleculeGraph instances
+- Render SVG
+- Mutate molecular graphs
+
+The product engine is deterministic and heuristic-driven.
 
 ### `src/render.js`
 

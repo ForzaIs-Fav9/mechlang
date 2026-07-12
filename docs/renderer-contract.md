@@ -78,15 +78,19 @@ Molecule {
 
 `semantic-engine.js` exports:
 ```js
-export function validateTransforms(step): void
-export function inferArrowsFromTransforms(step): Arrow[]
+export function validateTransforms(step, graphMap): void
+export function inferArrowsFromTransforms(step, graphMap): Arrow[]
 ```
+
+Both functions receive `graphMap` (`Map<string, MoleculeGraph>`) from `compile.js`.
+They use read-only topology queries (`hasBond()`, `charge`, `name`) to reason about chemistry.
 
 ### Semantic Guarantees
 - `validateTransforms()` emits warnings only; it never throws
 - `inferArrowsFromTransforms()` returns deterministic inferred arrow descriptors
 - Inferred arrows may be combined with explicit arrows in the renderer
 - Semantic inference never mutates SVG or layout state
+- Semantic inference never constructs MoleculeGraph instances
 
 ---
 
@@ -94,7 +98,7 @@ export function inferArrowsFromTransforms(step): Arrow[]
 
 `product-engine.js` exports:
 ```js
-export function inferProducts(step): {
+export function inferProducts(step, graphMap): {
   inferred: boolean,
   mechanism: string | null,
   products: string[],
@@ -102,11 +106,15 @@ export function inferProducts(step): {
 }
 ```
 
+Receives `graphMap` (`Map<string, MoleculeGraph>`) from `compile.js`.
+Uses read-only topology queries (`hasBond()`, `getAtom()`, `atomCount()`, `charge`) for species classification.
+
 ### Product Guarantees
 - `inferProducts()` is deterministic
 - It performs heuristic product synthesis only
 - It never mutates renderer state
 - It never emits SVG
+- It never constructs MoleculeGraph instances
 - It never rewrites molecular graphs
 - It returns product molecule keys ready to be merged into a renderable step
 
@@ -118,6 +126,19 @@ export function inferProducts(step): {
 ```js
 export function compile(ast): CompiledMechanism
 ```
+
+### MoleculeGraph Ownership
+
+`compile.js` is the sole production code that constructs `MoleculeGraph` instances.
+For each step, it builds a `graphMap` (`Map<string, MoleculeGraph>`) containing one
+graph per unique molecule key in that step's species. The graphMap is passed to
+`semantic-engine.js` and `product-engine.js` as a read-only dependency.
+
+```js
+function buildGraphMap(species): Map<string, MoleculeGraph>
+```
+
+Deduplication: `if (!graphMap.has(molKey))` — each molecule is constructed at most once per step.
 
 ### Compiled Mechanism Shape
 ```js
@@ -137,7 +158,9 @@ CompiledStep {
 
 ### Compile Guarantees
 - Deterministic output for identical AST input
-- Calls `validateTransforms()` — emits warnings only, never throws
+- Constructs MoleculeGraph once per unique molecule per step (sole graph owner)
+- Passes graphMap to engines; engines never construct graphs themselves
+- Calls `validateTransforms(step, graphMap)` — emits warnings only, never throws
 - Infers arrows from transforms when `step.arrows` is empty
 - Infers products and merges into species as `inferred_0`, `inferred_1`, ...
 - Never performs I/O or generates SVG

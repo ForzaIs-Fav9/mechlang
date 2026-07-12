@@ -163,3 +163,35 @@ turning the renderer into a chemistry engine. It also keeps the
 pipeline testable and deterministic.
 
 ---
+
+## 14. MoleculeGraph is read-only and owned by compile.js
+
+**Decision:** `MoleculeGraph` is a read-only graph abstraction.
+`compile.js` is the sole production code that constructs instances.
+Engines receive a pre-built `graphMap` and use query methods only.
+
+**Why:** Centralizing construction in compile.js provides a single
+point of caching (one graph per unique molecule per step) and prevents
+engines from coupling to the registry's internal format. Read-only
+semantics mean engines cannot accidentally mutate shared state, which
+is critical when both semantic-engine and product-engine receive the
+same graphMap reference. This also keeps the door open for future
+graph mutation — when needed, it will happen in a dedicated layer,
+not scattered across consumers.
+
+---
+
+## 15. Renderer accesses moleculeRegistry directly, not MoleculeGraph
+
+**Decision:** `render.js` imports `moleculeRegistry` directly for atom
+coordinates. It does not use `MoleculeGraph` at all.
+
+**Why:** The renderer needs layout coordinates (`{x, y}` per atom)
+which are heuristic display offsets, not topology. MoleculeGraph
+deliberately strips coordinates to maintain a clean topology-only
+abstraction. Giving the renderer graph access would blur the boundary
+between "what bonds exist" (chemistry) and "where atoms appear on
+screen" (geometry). The renderer's job is geometry; the graph's job
+is topology. They stay separate.
+
+---

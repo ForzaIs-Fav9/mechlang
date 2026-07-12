@@ -46,21 +46,23 @@ mechlang follows a layered compiler-style pipeline:
     ↓
   cli.js              → orchestrates I/O
     ↓
-  parse.js            → AST
+  parse.js            → AST (no chemistry, no graph knowledge)
     ↓
-  compile.js          → semantic validation + arrow inference + product inference
-    ↓                      (uses semantic-engine.js and product-engine.js)
-  render.js           → SVG string (pure function, no I/O)
+  compile.js          → constructs MoleculeGraph, orchestrates semantic reasoning
+    ↓                      ├── semantic-engine.js (consumes graphMap)
+    ↓                      └── product-engine.js  (consumes graphMap)
+  render.js           → SVG string (pure function, no I/O, no graph knowledge)
     ↓
   out/*.svg
 ```
 
 * `cli.js` handles file I/O and argument parsing
 * `parse.js` handles syntax only — produces the AST
-* `compile.js` orchestrates chemistry reasoning: semantic validation, arrow inference, product inference
-* `semantic-engine.js` validates transforms and infers curved arrows
-* `product-engine.js` performs heuristic product synthesis
-* `render.js` handles visualization only — receives pre-compiled mechanism data
+* `compile.js` owns MoleculeGraph construction (one graph per unique molecule per step) and orchestrates chemistry reasoning
+* `molecule-graph.js` provides a read-only graph abstraction over molecule topology
+* `semantic-engine.js` validates transforms and infers curved arrows via graph topology queries
+* `product-engine.js` classifies species and performs heuristic product synthesis via graph topology queries
+* `render.js` handles visualization only — receives pre-compiled mechanism data, has no graph knowledge
 
 The renderer is driven entirely by compiled mechanism data — not by hardcoded geometry. Chemistry reasoning never lives in the renderer.
 
@@ -196,17 +198,20 @@ mechlang is still an early-stage prototype focused on semantic architecture.
 * inferred product rendering
 * semantic diagnostics
 * species persistence
+* MoleculeGraph read-only topology queries
+* graph-based species classification
 * SVG output
 * horizontal and vertical layouts
 * double-bond rendering
 * charges
 * semantic engine tests
 * product engine tests
+* molecule-graph tests
 * product separation and leaving-group rendering
 
 ### Not yet supported
 
-* full molecular graph rewriting
+* molecular graph mutation/rewriting
 * transition-state visualization
 * stereochemistry
 * aromaticity
@@ -273,16 +278,18 @@ Persistent species are resolved during parsing before rendering.
 
 ## Testing
 
-Run semantic-engine tests:
+Run all tests:
+
+```bash
+npm test
+```
+
+Run individual test suites:
 
 ```bash
 node tests/semantic-engine.test.js
-```
-
-Run product-engine tests:
-
-```bash
 node tests/product-engine.test.js
+node tests/molecule-graph.test.js
 ```
 
 Render example mechanisms:

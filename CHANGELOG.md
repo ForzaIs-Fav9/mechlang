@@ -8,12 +8,58 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Planned (v0.17+)
+### Planned
 
 * transition-state construction
 * intermediate-state representation
 * multi-step reaction synthesis
 * resonance and state propagation
+
+---
+
+## [0.17.0] - 2026-07-12
+
+### Added
+
+- `MoleculeGraph` class (`src/molecule-graph.js`) — read-only graph abstraction over molecule topology
+- Query API: `getAtom()`, `neighbors()`, `hasBond()`, `getBond()`, `bondOrder()`, `atomCount()`, `bondCount()`
+- `MoleculeGraph.fromRegistry(name)` factory constructs graphs from the molecule registry
+- `compile.js` owns graph construction — builds a `graphMap` (one graph per unique molecule per step)
+- `semantic-engine.js` consumes `graphMap` for bond validation and arrow inference
+- `product-engine.js` consumes `graphMap` for species classification and SN2 pattern matching
+- Comprehensive molecule-graph test suite (19 assertions across all query methods)
+
+### Changed
+
+- `semantic-engine.js` — migrated from direct registry traversal to `graphMap` topology queries
+- `product-engine.js` — migrated species classification from registry key matching to graph-based structural analysis
+- `compile.js` — centralized MoleculeGraph ownership; engines receive pre-built `graphMap`
+- `validateTransforms(step, graphMap)` — signature now accepts graphMap parameter
+- `inferArrowsFromTransforms(step, graphMap)` — signature now accepts graphMap parameter
+- `inferProducts(step, graphMap)` — signature now accepts graphMap parameter
+
+### Removed
+
+- Dead renderer functions: `sampleQuadratic()`, `collides()`, `offsetEndpoint()`, `renderArrow()` (142 lines)
+
+### Architecture
+
+MoleculeGraph ownership model:
+
+```text
+compile.js          → constructs MoleculeGraph instances (sole owner)
+    ↓ graphMap
+semantic-engine.js  → consumes graphMap (read-only topology queries)
+product-engine.js   → consumes graphMap (read-only topology queries)
+render.js           → no graph knowledge (uses moleculeRegistry for layout coords)
+parse.js            → no graph knowledge (produces pure AST)
+```
+
+Key invariants:
+- Graphs are constructed once per unique molecule per step (Map deduplication)
+- Engines never construct or mutate graphs
+- Renderer remains topology-blind — accesses registry directly for coordinates
+- Parser remains chemistry-blind — produces structural AST only
 
 ---
 
