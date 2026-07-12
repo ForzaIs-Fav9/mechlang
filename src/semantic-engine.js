@@ -1,4 +1,4 @@
-import { moleculeRegistry } from './molecules.js';
+import { MoleculeGraph } from './molecule-graph.js';
 
 export function validateTransforms(step) {
 
@@ -24,12 +24,23 @@ export function validateTransforms(step) {
             ? 'CN-'
             : 'OH-';
 
-        const hasNucleophile =
-          Object.values(
-            step.species
-          ).includes(
-            requiredNucleophile
-          );
+        let hasNucleophile = false;
+
+        for (
+          const molKey
+          of Object.values(step.species)
+        ) {
+          let graph;
+          try { graph = MoleculeGraph.fromRegistry(molKey); }
+          catch { continue; }
+
+          if (
+            graph.charge === -1 &&
+            graph.name === requiredNucleophile
+          ) {
+            hasNucleophile = true;
+          }
+        }
 
         if (!hasNucleophile) {
 
@@ -46,48 +57,21 @@ export function validateTransforms(step) {
       transform.type === 'break'
     ) {
 
-      const [a,b] =
+      const [a, b] =
         transform.bond;
 
-      let found =
-        false;
+      let found = false;
 
       for (
         const molKey
-        of Object.values(
-          step.species
-        )
+        of Object.values(step.species)
       ) {
+        let graph;
+        try { graph = MoleculeGraph.fromRegistry(molKey); }
+        catch { continue; }
 
-        const mol =
-          moleculeRegistry[
-            molKey
-          ];
-
-        if (!mol) continue;
-
-        for (
-          const bond
-          of (mol.bonds || [])
-        ) {
-
-          const [x,y] =
-            bond;
-
-          const direct =
-            x===a &&
-            y===b;
-
-          const reverse =
-            x===b &&
-            y===a;
-
-          if (
-            direct ||
-            reverse
-          ) {
-            found=true;
-          }
+        if (graph.hasBond(a, b)) {
+          found = true;
         }
       }
 
@@ -105,132 +89,76 @@ export function inferArrowsFromTransforms(
   step
 ) {
 
-  const inferred=[];
+  const inferred = [];
 
   for (
     const transform
-    of (step.transforms||[])
+    of (step.transforms || [])
   ) {
 
     // ── FORM inference ───────────────────────────────────────────────
 
     if (
-      transform.type==='form'
+      transform.type === 'form'
     ) {
 
-      const [a,b]=
+      const [a, b] =
         transform.bond;
 
       if (
-        a==='C' &&
-        ['CN','OH'].includes(
-          b
-        )
+        a === 'C' &&
+        ['CN', 'OH'].includes(b)
       ) {
 
-        let nucRole =
-          null;
+        let nucRole = null;
+        let subRole = null;
 
-        let subRole =
-          null;
+        const requiredNucleophile =
+          b === 'CN' ? 'CN-' : 'OH-';
 
         for (
-          const [role,molKey]
-          of Object.entries(
-            step.species
-          )
+          const [role, molKey]
+          of Object.entries(step.species)
         ) {
-
-          const isMatchingNucleophile =
-
-            (
-              b==='CN' &&
-              molKey==='CN-'
-            )
-
-            ||
-
-            (
-              b==='OH' &&
-              molKey==='OH-'
-            );
+          let graph;
+          try { graph = MoleculeGraph.fromRegistry(molKey); }
+          catch { continue; }
 
           if (
-            isMatchingNucleophile
+            graph.charge === -1 &&
+            graph.name === requiredNucleophile
           ) {
-
-            nucRole=
-              role;
+            nucRole = role;
           }
 
           if (
-
-            molKey.includes(
-              'Br'
-            ) ||
-
-            molKey.includes(
-              'Cl'
-            ) ||
-
-            molKey.includes(
-              'I'
-            )
-
+            graph.hasBond('C', 'Br') ||
+            graph.hasBond('C', 'Cl') ||
+            graph.hasBond('C', 'I')
           ) {
-
-            subRole=
-              role;
+            subRole = role;
           }
         }
 
-        if (
-          nucRole &&
-          subRole
-        ) {
+        if (nucRole && subRole) {
+
+          let subGraph;
+          try { subGraph = MoleculeGraph.fromRegistry(step.species[subRole]); }
+          catch { continue; }
 
           const leavingAtom =
-
-            step.species[
-              subRole
-            ].includes(
-              'Br'
-            )
-
-            ? 'Br'
-
-            :
-
-            step.species[
-              subRole
-            ].includes(
-              'Cl'
-            )
-
-            ? 'Cl'
-
-            : 'I';
+            subGraph.hasBond('C', 'Br') ? 'Br' :
+            subGraph.hasBond('C', 'Cl') ? 'Cl' : 'I';
 
           const attackAtom =
-
-            b==='CN'
-              ? 'C'
-              : 'O';
+            b === 'CN' ? 'C' : 'O';
 
           inferred.push({
-
-            curved:true,
-            inferred:true,
-
-            inferenceType:
-              'attack',
-
-            from:
-              `${nucRole}.${attackAtom}`,
-
-            to:
-              `${subRole}.C-${leavingAtom}`
-
+            curved: true,
+            inferred: true,
+            inferenceType: 'attack',
+            from: `${nucRole}.${attackAtom}`,
+            to: `${subRole}.C-${leavingAtom}`
           });
         }
       }
@@ -239,71 +167,41 @@ export function inferArrowsFromTransforms(
     // ── BREAK inference ───────────────────────────────────────────────
 
     if (
-      transform.type==='break'
+      transform.type === 'break'
     ) {
 
-      const [a,b]=
+      const [a, b] =
         transform.bond;
 
       if (
-
-        a==='C' &&
-
-        ['Br','Cl','I']
-        .includes(
-          b
-        )
-
+        a === 'C' &&
+        ['Br', 'Cl', 'I'].includes(b)
       ) {
 
-        let subRole =
-          null;
+        let subRole = null;
 
         for (
-          const [role,molKey]
-          of Object.entries(
-            step.species
-          )
+          const [role, molKey]
+          of Object.entries(step.species)
         ) {
+          let graph;
+          try { graph = MoleculeGraph.fromRegistry(molKey); }
+          catch { continue; }
 
-          if (
-
-            molKey.includes(
-              b
-            )
-
-            &&
-
-            molKey.includes(
-              'CH3'
-            )
-
-          ) {
-
-            subRole=
-              role;
+          if (graph.hasBond('C', b)) {
+            subRole = role;
           }
         }
 
-        if (
-          subRole
-        ) {
+        if (subRole) {
 
           inferred.push({
-
-            curved:true,
-            inferred:true,
-
-            inferenceType:
-              'leaving',
-
-            from:
-              `${subRole}.C-${b}`,
-
-            to:
-              `${subRole}.${b}`,
-
-            local:true
+            curved: true,
+            inferred: true,
+            inferenceType: 'leaving',
+            from: `${subRole}.C-${b}`,
+            to: `${subRole}.${b}`,
+            local: true
           });
         }
       }
