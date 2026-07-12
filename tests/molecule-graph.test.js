@@ -139,6 +139,181 @@ assert.strictEqual(carbonylBond.order, 2);
 console.log('✓ Bond from/to/order structure correct');
 
 // ─────────────────────────────────────────────────────────────────────────────
+// getAtom: lookup existing atom
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const graph = MoleculeGraph.fromRegistry('CH3-Br');
+  const atom = graph.getAtom('C');
+  assert.ok(atom, 'getAtom should return the atom');
+  assert.strictEqual(atom.id, 'C');
+  assert.strictEqual(atom.element, 'C');
+
+  const br = graph.getAtom('Br');
+  assert.ok(br, 'getAtom should return Br atom');
+  assert.strictEqual(br.element, 'Br');
+}
+
+console.log('✓ getAtom returns existing atoms');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getAtom: missing atom returns null
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const graph = MoleculeGraph.fromRegistry('CH3-Br');
+  const missing = graph.getAtom('Zn');
+  assert.strictEqual(missing, null, 'getAtom should return null for missing atom');
+}
+
+console.log('✓ getAtom returns null for missing atom');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// neighbors: returns connected atom ids
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const acetone = MoleculeGraph.fromRegistry('CH3COCH3');
+  const neighborsOfCb = acetone.neighbors('Cb');
+  assert.ok(neighborsOfCb.includes('Ca'), 'Cb should neighbor Ca');
+  assert.ok(neighborsOfCb.includes('Cc'), 'Cb should neighbor Cc');
+  assert.ok(neighborsOfCb.includes('O'), 'Cb should neighbor O');
+  assert.strictEqual(neighborsOfCb.length, 3, 'Cb should have 3 neighbors');
+
+  const neighborsOfO = acetone.neighbors('O');
+  assert.ok(neighborsOfO.includes('Cb'), 'O should neighbor Cb');
+  assert.strictEqual(neighborsOfO.length, 1, 'O should have 1 neighbor');
+}
+
+console.log('✓ neighbors returns connected atom ids');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// neighbors: isolated/missing atom returns empty array
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const graph = MoleculeGraph.fromRegistry('CH3-Br');
+  const result = graph.neighbors('NONEXISTENT');
+  assert.deepStrictEqual(result, [], 'neighbors of missing atom should be empty');
+}
+
+console.log('✓ neighbors returns empty array for missing atom');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// hasBond: existing bond
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const graph = MoleculeGraph.fromRegistry('CH3-Br');
+  assert.strictEqual(graph.hasBond('C', 'Br'), true, 'C-Br bond should exist');
+  assert.strictEqual(graph.hasBond('Br', 'C'), true, 'Br-C bond should exist (reverse)');
+}
+
+console.log('✓ hasBond returns true for existing bonds');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// hasBond: missing bond
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const acetone = MoleculeGraph.fromRegistry('CH3COCH3');
+  assert.strictEqual(acetone.hasBond('Ca', 'O'), false, 'Ca-O bond should not exist');
+  assert.strictEqual(acetone.hasBond('X', 'Y'), false, 'nonexistent atoms should return false');
+}
+
+console.log('✓ hasBond returns false for missing bonds');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getBond: existing bond returns bond object
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const ethene = MoleculeGraph.fromRegistry('CH2=CH2');
+  const bond = ethene.getBond('Ca', 'Cb');
+  assert.ok(bond, 'getBond should return the bond');
+  assert.strictEqual(bond.order, 2);
+
+  const bondReverse = ethene.getBond('Cb', 'Ca');
+  assert.ok(bondReverse, 'getBond should work in reverse direction');
+  assert.strictEqual(bondReverse.order, 2);
+}
+
+console.log('✓ getBond returns bond object for existing bonds');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getBond: missing bond returns null
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const graph = MoleculeGraph.fromRegistry('CH3-Br');
+  const missing = graph.getBond('C', 'NONEXISTENT');
+  assert.strictEqual(missing, null, 'getBond should return null for missing bond');
+}
+
+console.log('✓ getBond returns null for missing bond');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// bondOrder: returns order for existing bond
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const ch3br = MoleculeGraph.fromRegistry('CH3-Br');
+  assert.strictEqual(ch3br.bondOrder('C', 'Br'), 1, 'C-Br should be order 1');
+
+  const ethene = MoleculeGraph.fromRegistry('CH2=CH2');
+  assert.strictEqual(ethene.bondOrder('Ca', 'Cb'), 2, 'Ca=Cb should be order 2');
+
+  const acetone = MoleculeGraph.fromRegistry('CH3COCH3');
+  assert.strictEqual(acetone.bondOrder('Cb', 'O'), 2, 'Cb=O should be order 2');
+  assert.strictEqual(acetone.bondOrder('Ca', 'Cb'), 1, 'Ca-Cb should be order 1');
+}
+
+console.log('✓ bondOrder returns correct order');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// bondOrder: missing bond returns null
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const graph = MoleculeGraph.fromRegistry('CH3-Br');
+  assert.strictEqual(graph.bondOrder('C', 'NONE'), null, 'bondOrder should return null for missing bond');
+}
+
+console.log('✓ bondOrder returns null for missing bond');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// atomCount: returns number of atoms
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const ch3br = MoleculeGraph.fromRegistry('CH3-Br');
+  const entry = moleculeRegistry['CH3-Br'];
+  assert.strictEqual(ch3br.atomCount(), Object.keys(entry.atoms).length);
+
+  const acetone = MoleculeGraph.fromRegistry('CH3COCH3');
+  const acetoneEntry = moleculeRegistry['CH3COCH3'];
+  assert.strictEqual(acetone.atomCount(), Object.keys(acetoneEntry.atoms).length);
+}
+
+console.log('✓ atomCount returns correct count');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// bondCount: returns number of bonds
+// ─────────────────────────────────────────────────────────────────────────────
+
+{
+  const ch3br = MoleculeGraph.fromRegistry('CH3-Br');
+  const entry = moleculeRegistry['CH3-Br'];
+  assert.strictEqual(ch3br.bondCount(), (entry.bonds || []).length);
+
+  const acetone = MoleculeGraph.fromRegistry('CH3COCH3');
+  const acetoneEntry = moleculeRegistry['CH3COCH3'];
+  assert.strictEqual(acetone.bondCount(), (acetoneEntry.bonds || []).length);
+}
+
+console.log('✓ bondCount returns correct count');
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Error case: unknown registry key
 // ─────────────────────────────────────────────────────────────────────────────
 
