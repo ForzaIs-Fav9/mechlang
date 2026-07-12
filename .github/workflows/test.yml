@@ -30,6 +30,8 @@ jobs:
           node tests/parse.test.js
           node tests/semantic-engine.test.js
           node tests/product-engine.test.js
+          node tests/compile.test.js
+          node tests/molecule-graph.test.js
           node tests/render.test.js
           node tests/warnings.test.js
 
