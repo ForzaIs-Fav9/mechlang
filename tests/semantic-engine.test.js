@@ -4,6 +4,19 @@ import {
   inferArrowsFromTransforms
 } from '../src/semantic-engine.js';
 
+import { MoleculeGraph } from '../src/molecule-graph.js';
+
+function buildGraphMap(species) {
+  const graphMap = new Map();
+  for (const molKey of Object.values(species)) {
+    if (!graphMap.has(molKey)) {
+      try { graphMap.set(molKey, MoleculeGraph.fromRegistry(molKey)); }
+      catch { /* skip */ }
+    }
+  }
+  return graphMap;
+}
+
 function runTests() {
 
   // ───────────────────────────────────────────────────────────────────────
@@ -34,7 +47,7 @@ function runTests() {
     };
 
     const arrows =
-      inferArrowsFromTransforms(step);
+      inferArrowsFromTransforms(step, buildGraphMap(step.species));
 
     assert.strictEqual(
       arrows.length,
@@ -80,7 +93,7 @@ function runTests() {
     };
 
     const arrows =
-      inferArrowsFromTransforms(step);
+      inferArrowsFromTransforms(step, buildGraphMap(step.species));
 
     assert.strictEqual(
       arrows.length,
@@ -112,7 +125,7 @@ function runTests() {
     };
 
     const arrows =
-      inferArrowsFromTransforms(step);
+      inferArrowsFromTransforms(step, buildGraphMap(step.species));
 
     assert.strictEqual(
       arrows.length,

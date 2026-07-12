@@ -4,6 +4,19 @@ import {
   inferProducts
 } from '../src/product-engine.js';
 
+import { MoleculeGraph } from '../src/molecule-graph.js';
+
+function buildGraphMap(species) {
+  const graphMap = new Map();
+  for (const molKey of Object.values(species)) {
+    if (!graphMap.has(molKey)) {
+      try { graphMap.set(molKey, MoleculeGraph.fromRegistry(molKey)); }
+      catch { /* skip */ }
+    }
+  }
+  return graphMap;
+}
+
 function runTests() {
 
   // ───────────────────────────────────────────────────────────────────────
@@ -19,7 +32,7 @@ function runTests() {
     };
 
     const result =
-      inferProducts(step);
+      inferProducts(step, buildGraphMap(step.species));
 
     assert.strictEqual(
       result.inferred,
@@ -74,7 +87,7 @@ function runTests() {
     };
 
     const result =
-      inferProducts(step);
+      inferProducts(step, buildGraphMap(step.species));
 
     assert.strictEqual(
       result.inferred,
@@ -132,7 +145,7 @@ function runTests() {
     };
 
     const result =
-      inferProducts(step);
+      inferProducts(step, buildGraphMap(step.species));
 
     assert.strictEqual(
       result.inferred,
@@ -186,7 +199,7 @@ function runTests() {
     };
 
     const result =
-      inferProducts(step);
+      inferProducts(step, buildGraphMap(step.species));
 
     assert.strictEqual(
       result.inferred,
@@ -238,7 +251,7 @@ function runTests() {
     };
 
     const result =
-      inferProducts(step);
+      inferProducts(step, buildGraphMap(step.species));
 
     assert.strictEqual(
       result.inferred,

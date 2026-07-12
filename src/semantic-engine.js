@@ -1,6 +1,4 @@
-import { MoleculeGraph } from './molecule-graph.js';
-
-export function validateTransforms(step) {
+export function validateTransforms(step, graphMap) {
 
   for (const transform of step.transforms || []) {
 
@@ -30,9 +28,8 @@ export function validateTransforms(step) {
           const molKey
           of Object.values(step.species)
         ) {
-          let graph;
-          try { graph = MoleculeGraph.fromRegistry(molKey); }
-          catch { continue; }
+          const graph = graphMap.get(molKey);
+          if (!graph) continue;
 
           if (
             graph.charge === -1 &&
@@ -66,9 +63,8 @@ export function validateTransforms(step) {
         const molKey
         of Object.values(step.species)
       ) {
-        let graph;
-        try { graph = MoleculeGraph.fromRegistry(molKey); }
-        catch { continue; }
+        const graph = graphMap.get(molKey);
+        if (!graph) continue;
 
         if (graph.hasBond(a, b)) {
           found = true;
@@ -86,7 +82,7 @@ export function validateTransforms(step) {
 }
 
 export function inferArrowsFromTransforms(
-  step
+  step, graphMap
 ) {
 
   const inferred = [];
@@ -120,9 +116,8 @@ export function inferArrowsFromTransforms(
           const [role, molKey]
           of Object.entries(step.species)
         ) {
-          let graph;
-          try { graph = MoleculeGraph.fromRegistry(molKey); }
-          catch { continue; }
+          const graph = graphMap.get(molKey);
+          if (!graph) continue;
 
           if (
             graph.charge === -1 &&
@@ -142,9 +137,8 @@ export function inferArrowsFromTransforms(
 
         if (nucRole && subRole) {
 
-          let subGraph;
-          try { subGraph = MoleculeGraph.fromRegistry(step.species[subRole]); }
-          catch { continue; }
+          const subGraph = graphMap.get(step.species[subRole]);
+          if (!subGraph) continue;
 
           const leavingAtom =
             subGraph.hasBond('C', 'Br') ? 'Br' :
@@ -184,9 +178,8 @@ export function inferArrowsFromTransforms(
           const [role, molKey]
           of Object.entries(step.species)
         ) {
-          let graph;
-          try { graph = MoleculeGraph.fromRegistry(molKey); }
-          catch { continue; }
+          const graph = graphMap.get(molKey);
+          if (!graph) continue;
 
           if (graph.hasBond('C', b)) {
             subRole = role;

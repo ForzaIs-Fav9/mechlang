@@ -1,10 +1,8 @@
-import { MoleculeGraph } from './molecule-graph.js';
-
 // ─────────────────────────────────────────────────────────────────────────
 // Species classification
 // ─────────────────────────────────────────────────────────────────────────
 
-function classifySpecies(mol) {
+function classifySpecies(mol, graphMap) {
 
   const info = {
     category: null,
@@ -17,9 +15,8 @@ function classifySpecies(mol) {
   // Structural classification via MoleculeGraph
   // ───────────────────────────────────────────────────────────────────────
 
-  let graph;
-  try { graph = MoleculeGraph.fromRegistry(mol); }
-  catch { return info; }
+  const graph = graphMap.get(mol);
+  if (!graph) return info;
 
   // ───────────────────────────────────────────────────────────────────────
   // Nucleophile detection by charge and topology
@@ -122,7 +119,7 @@ const SN2_RULES = [
   }
 ];
 
-export function inferProducts(step) {
+export function inferProducts(step, graphMap) {
 
   const result = {
     inferred: false,
@@ -144,7 +141,7 @@ export function inferProducts(step) {
   for (const [, mol] of species) {
 
     const info =
-      classifySpecies(mol);
+      classifySpecies(mol, graphMap);
 
     if (
       info.category === 'nucleophile'

@@ -3,6 +3,18 @@ import { execSync } from 'child_process';
 import { writeFileSync, unlinkSync, readFileSync, existsSync } from 'fs';
 import { parseMechlang } from '../src/parse.js';
 import { validateTransforms } from '../src/semantic-engine.js';
+import { MoleculeGraph } from '../src/molecule-graph.js';
+
+function buildGraphMap(species) {
+  const graphMap = new Map();
+  for (const molKey of Object.values(species)) {
+    if (!graphMap.has(molKey)) {
+      try { graphMap.set(molKey, MoleculeGraph.fromRegistry(molKey)); }
+      catch { /* skip */ }
+    }
+  }
+  return graphMap;
+}
 
 function captureWarns(fn) {
   const warnings = [];
@@ -248,7 +260,7 @@ step {
     let threw = false;
     captureWarns(() => {
       try {
-        validateTransforms(step);
+        validateTransforms(step, buildGraphMap(step.species));
       } catch {
         threw = true;
       }
@@ -272,7 +284,7 @@ step {
     };
 
     const warnings = captureWarns(() => {
-      validateTransforms(step);
+      validateTransforms(step, buildGraphMap(step.species));
     });
 
     const match = warnings.find(w => w.includes('missing bond') && w.includes('X-Z'));
@@ -294,7 +306,7 @@ step {
     };
 
     const warnings = captureWarns(() => {
-      validateTransforms(step);
+      validateTransforms(step, buildGraphMap(step.species));
     });
 
     const match = warnings.find(w => w.includes('CN-') && w.includes('nucleophile'));
