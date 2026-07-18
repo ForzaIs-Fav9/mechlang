@@ -78,15 +78,18 @@ Molecule {
 
 `semantic-engine.js` exports:
 ```js
-export function validateTransforms(step): void
-export function inferArrowsFromTransforms(step): Arrow[]
+export function validateTransforms(step, graphMap): void
+export function inferArrowsFromTransforms(step, graphMap): Arrow[]
 ```
+
+Where `graphMap` is `Map<string, MoleculeGraph>` — constructed and owned by compile.js.
 
 ### Semantic Guarantees
 - `validateTransforms()` emits warnings only; it never throws
 - `inferArrowsFromTransforms()` returns deterministic inferred arrow descriptors
 - Inferred arrows may be combined with explicit arrows in the renderer
 - Semantic inference never mutates SVG or layout state
+- Never constructs MoleculeGraph instances — receives them via graphMap
 
 ---
 
@@ -94,7 +97,7 @@ export function inferArrowsFromTransforms(step): Arrow[]
 
 `product-engine.js` exports:
 ```js
-export function inferProducts(step): {
+export function inferProducts(step, graphMap): {
   inferred: boolean,
   mechanism: string | null,
   products: string[],
@@ -102,12 +105,15 @@ export function inferProducts(step): {
 }
 ```
 
+Where `graphMap` is `Map<string, MoleculeGraph>` — constructed and owned by compile.js.
+
 ### Product Guarantees
 - `inferProducts()` is deterministic
 - It performs heuristic product synthesis only
 - It never mutates renderer state
 - It never emits SVG
 - It never rewrites molecular graphs
+- It never constructs MoleculeGraph instances — receives them via graphMap
 - It returns product molecule keys ready to be merged into a renderable step
 
 ---

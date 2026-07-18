@@ -28,6 +28,48 @@ export class MoleculeGraph {
     this.charge = charge;
   }
 
+  getAtom(id) {
+    return this.atoms.find(a => a.id === id) || null;
+  }
+
+  neighbors(id) {
+    const result = [];
+
+    for (const bond of this.bonds) {
+      if (bond.from === id) result.push(bond.to);
+      else if (bond.to === id) result.push(bond.from);
+    }
+
+    return result;
+  }
+
+  hasBond(a, b) {
+    return this.bonds.some(
+      bond => (bond.from === a && bond.to === b) ||
+              (bond.from === b && bond.to === a)
+    );
+  }
+
+  getBond(a, b) {
+    return this.bonds.find(
+      bond => (bond.from === a && bond.to === b) ||
+              (bond.from === b && bond.to === a)
+    ) || null;
+  }
+
+  bondOrder(a, b) {
+    const bond = this.getBond(a, b);
+    return bond ? bond.order : null;
+  }
+
+  atomCount() {
+    return this.atoms.length;
+  }
+
+  bondCount() {
+    return this.bonds.length;
+  }
+
   static fromRegistry(name) {
     const entry = moleculeRegistry[name];
 

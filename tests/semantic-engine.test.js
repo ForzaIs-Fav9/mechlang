@@ -4,6 +4,8 @@ import {
   inferArrowsFromTransforms
 } from '../src/semantic-engine.js';
 
+import { buildGraphMap } from './test-utils.js';
+
 function runTests() {
 
   // ───────────────────────────────────────────────────────────────────────
@@ -33,8 +35,10 @@ function runTests() {
       persist: []
     };
 
+    const graphMap = buildGraphMap(step.species);
+
     const arrows =
-      inferArrowsFromTransforms(step);
+      inferArrowsFromTransforms(step, graphMap);
 
     assert.strictEqual(
       arrows.length,
@@ -79,8 +83,10 @@ function runTests() {
       persist: []
     };
 
+    const graphMap = buildGraphMap(step.species);
+
     const arrows =
-      inferArrowsFromTransforms(step);
+      inferArrowsFromTransforms(step, graphMap);
 
     assert.strictEqual(
       arrows.length,
@@ -111,8 +117,10 @@ function runTests() {
       persist: []
     };
 
+    const graphMap = buildGraphMap(step.species);
+
     const arrows =
-      inferArrowsFromTransforms(step);
+      inferArrowsFromTransforms(step, graphMap);
 
     assert.strictEqual(
       arrows.length,

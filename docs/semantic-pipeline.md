@@ -31,11 +31,12 @@ cli.js              → I/O orchestration
     ↓
 parse.js            → AST
     ↓
-compile.js          → orchestrates semantic layers:
-    ├── semantic-engine.js  → validation + arrow inference
-    └── product-engine.js   → product synthesis
+compile.js          → constructs per-step graphMap (MoleculeGraph instances)
+    │                  orchestrates semantic layers:
+    ├── semantic-engine.js  → validation + arrow inference (receives graphMap)
+    └── product-engine.js   → product synthesis (receives graphMap)
     ↓
-render.js           → SVG (pure function, no I/O)
+render.js           → SVG (pure function, no I/O; uses molecules.js for coords only)
     ↓
 out/*.svg
 ```
@@ -63,6 +64,8 @@ Output:
 
 ## semantic-engine.js
 
+Receives `(step, graphMap)` from compile.js. Uses MoleculeGraph topology for validation.
+
 Responsible for:
 - semantic transform validation
 - arrow inference
@@ -77,6 +80,7 @@ Must NOT:
 - render SVG
 - synthesize products
 - mutate molecular graphs
+- construct MoleculeGraph instances
 
 Output:
 - semantic annotations
@@ -87,8 +91,11 @@ Output:
 
 ## product-engine.js
 
+Receives `(step, graphMap)` from compile.js. Uses MoleculeGraph topology for species classification.
+
 Responsible for:
 - inferred product synthesis
+- species role classification via structural queries
 - reaction-state output generation
 - deterministic heuristic chemistry inference
 
@@ -104,6 +111,7 @@ Must remain:
 Must NOT:
 - generate SVG
 - mutate renderer state
+- construct MoleculeGraph instances
 
 Output:
 - inferred product molecule keys

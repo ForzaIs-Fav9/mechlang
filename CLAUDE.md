@@ -35,10 +35,11 @@ Strictly layered compiler-style pipeline — no component reaches backward:
 |---|---|---|
 | `cli.js` | File I/O, argument parsing, pipeline orchestration | Infer chemistry, render SVG |
 | `parse.js` | Tokenize, build AST, resolve `persist:` cross-step references | Infer chemistry, render SVG |
-| `compile.js` | Orchestrate semantic validation, arrow inference, product inference | Render SVG, perform I/O |
-| `semantic-engine.js` | Validate transforms, infer curved arrows from `form`/`break` ops | Render SVG, synthesize products |
-| `product-engine.js` | Heuristic product inference (SN2 substitution, leaving groups) | Render SVG, mutate molecular graphs |
-| `render.js` | SVG generation, layout, geometry (pure function, no I/O) | Infer chemistry, validate transforms, import semantic/product engines |
+| `compile.js` | Construct per-step graphMap, orchestrate semantic validation, arrow inference, product inference | Render SVG, perform I/O |
+| `molecule-graph.js` | MoleculeGraph class — structural topology (atoms, bonds, charge, queries) | Store coordinates, render SVG |
+| `semantic-engine.js` | Validate transforms, infer curved arrows from `form`/`break` ops (receives graphMap from compile) | Render SVG, synthesize products, construct MoleculeGraph instances |
+| `product-engine.js` | Heuristic product inference (SN2 substitution, leaving groups) (receives graphMap from compile) | Render SVG, construct MoleculeGraph instances |
+| `render.js` | SVG generation, layout, geometry (pure function, no I/O) | Infer chemistry, validate transforms, import semantic/product engines, import molecule-graph |
 | `molecules.js` | Static registry of molecule templates (atoms, bonds, charges, coords) | — |
 
 Key architectural rules:

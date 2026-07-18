@@ -163,3 +163,34 @@ turning the renderer into a chemistry engine. It also keeps the
 pipeline testable and deterministic.
 
 ---
+
+## 14. Topology (MoleculeGraph) vs coordinates (molecules.js) are separate
+
+**Decision:** MoleculeGraph stores structural topology only (atoms, bonds,
+charge). It never stores coordinates. The renderer uses `molecules.js`
+coordinates directly and never imports `molecule-graph.js`.
+
+**Why:** Chemistry reasoning (bond queries, element classification,
+neighbor traversal) needs connectivity, not pixel positions. Rendering
+needs positions, not chemistry. Merging both into one structure couples
+the semantic engine to layout concerns and the renderer to graph
+abstractions. Keeping them separate preserves the architectural rule
+that chemistry reasoning never lives in the renderer.
+
+---
+
+## 15. compile.js owns MoleculeGraph construction and lifetime
+
+**Decision:** Only `compile.js` constructs MoleculeGraph instances (via
+`MoleculeGraph.fromRegistry()`). It builds a per-step `graphMap` and
+passes it to both `semantic-engine.js` and `product-engine.js`. The
+engines never import or construct MoleculeGraph themselves.
+
+**Why:** Single ownership prevents graph instances from proliferating
+across layers. It makes the data-flow direction explicit (compile →
+engines), prevents circular imports, and ensures unknown-molecule
+handling (graceful skip) happens in one place. If graph construction
+logic ever changes (e.g. caching, alternative sources), only compile.js
+needs to be updated.
+
+---

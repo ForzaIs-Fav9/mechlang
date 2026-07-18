@@ -13,8 +13,9 @@ responsibilities of each component in the pipeline.
       ↓
   parse.js        → AST (with persistence post-pass)
       ↓
-  compile.js      → orchestrates semantic validation + arrow inference + product inference
-      ↓               (uses semantic-engine.js and product-engine.js)
+  compile.js      → constructs per-step graphMap (MoleculeGraph instances)
+      ↓               orchestrates semantic validation + arrow inference + product inference
+      ↓               (passes graphMap to semantic-engine.js and product-engine.js)
   render.js       → SVG string (pure function, no I/O)
       ↓
   out/*.svg       → browser / export
@@ -24,10 +25,11 @@ The pipeline is strictly layered.
 
 - `cli.js` handles I/O and wires the pipeline
 - `parse.js` handles syntax only
-- `compile.js` orchestrates chemistry reasoning (delegates to semantic-engine and product-engine)
-- `semantic-engine.js` validates transforms and infers arrows
-- `product-engine.js` performs heuristic product synthesis
-- `render.js` handles visualization only — receives pre-compiled mechanism data
+- `compile.js` constructs MoleculeGraph instances per step, orchestrates chemistry reasoning (passes graphMap to semantic-engine and product-engine)
+- `molecule-graph.js` provides structural topology queries (atoms, bonds, charge) — read-only, no coordinates
+- `semantic-engine.js` validates transforms and infers arrows (receives graphMap from compile)
+- `product-engine.js` performs heuristic product synthesis (receives graphMap from compile)
+- `render.js` handles visualization only — uses molecules.js coordinates, never imports molecule-graph
 
 No component reaches backward across layers.
 
@@ -82,15 +84,32 @@ Each molecule entry contains:
 
 Coordinates are heuristic and template-driven. No chemistry inference.
 
+### `src/molecule-graph.js`
+
+Provides a read-only structural graph abstraction over molecules in the registry.
+
+A `MoleculeGraph` encapsulates:
+- atoms (id, element)
+- bonds (from, to, order)
+- net molecular charge
+
+Query methods: `getAtom`, `neighbors`, `hasBond`, `getBond`, `bondOrder`, `atomCount`, `bondCount`.
+
+Factory: `MoleculeGraph.fromRegistry(name)` constructs a graph from a `molecules.js` entry.
+
+MoleculeGraph stores topology only — no coordinates. The renderer never imports this module.
+
 ### `src/semantic-engine.js`
 
-Consumes the parsed AST and performs chemistry-semantic reasoning.
+Receives a step and a `graphMap` (Map of molecule key → MoleculeGraph) from compile.js.
+Performs chemistry-semantic reasoning using graph topology.
 
 Responsibilities:
 - Infer curved-arrow electron flow from transform semantics
 - Validate semantic transform consistency
 - Emit compiler-style warnings for invalid semantic operations
 - Remain independent from SVG rendering
+- Never construct MoleculeGraph instances (receives them via graphMap)
 
 Current supported inference patterns:
 - SN2 nucleophilic attack
@@ -101,12 +120,15 @@ It is intentionally not yet a full graph-rewrite chemistry system.
 
 ### `src/product-engine.js`
 
-Consumes the parsed AST plus semantic transform output and infers products.
+Receives a step and a `graphMap` (Map of molecule key → MoleculeGraph) from compile.js.
+Uses graph topology (neighbors, getAtom) for species classification.
 
 Responsibilities:
-- infer heuristic substitution products from transform operations
-- synthesize product molecule keys
-- remain independent from rendering
+- Infer heuristic substitution products from transform operations
+- Classify species roles (nucleophile, electrophile, leaving group) via structural queries
+- Synthesize product molecule keys
+- Remain independent from rendering
+- Never construct MoleculeGraph instances (receives them via graphMap)
 
 Current supported inference patterns:
 - SN2 product synthesis
@@ -117,12 +139,15 @@ It is intentionally not yet a full graph-rewrite chemistry system.
 
 ### `src/compile.js`
 
-Orchestrates semantic validation, arrow inference, and product inference.
+Owns MoleculeGraph construction and lifetime. Constructs a per-step `graphMap`
+(`Map<string, MoleculeGraph>`) from the step's species, then passes it to both engines.
+
 Consumes the raw AST from `parse.js` and produces a compiled mechanism
 with fully resolved species, arrows, and products ready for rendering.
 
 Responsibilities:
-- Run `validateTransforms()` on each step
+- Construct `graphMap` for each step (unknown molecules are silently skipped — graceful degradation)
+- Run `validateTransforms(step, graphMap)` on each step
 - Infer arrows from transforms when no explicit arrows exist
 - Infer products and merge them into the species map
 - Produce a compiled representation consumed by `render.js`
