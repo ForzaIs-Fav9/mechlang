@@ -8,12 +8,36 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Planned (v0.17+)
+### Planned (v0.18+)
 
 * transition-state construction
 * intermediate-state representation
 * multi-step reaction synthesis
 * resonance and state propagation
+
+---
+
+## [0.17.0] - 2026-07-18
+
+### Added
+
+- `molecule-graph.js` — read-only structural graph abstraction (atoms, bonds, charge)
+- MoleculeGraph query API: `getAtom`, `neighbors`, `hasBond`, `getBond`, `bondOrder`, `atomCount`, `bondCount`
+- `MoleculeGraph.fromRegistry()` factory constructs graphs from molecule registry entries
+- Per-step `graphMap` (`Map<string, MoleculeGraph>`) constructed in compile.js
+
+### Changed
+
+- `compile.js` now owns MoleculeGraph construction and passes `graphMap` to both engines
+- `semantic-engine.js` receives `graphMap` — no longer imports moleculeRegistry directly for topology
+- `product-engine.js` receives `graphMap` — species classification uses structural graph queries instead of string matching
+- Engine function signatures updated: `validateTransforms(step, graphMap)`, `inferArrowsFromTransforms(step, graphMap)`, `inferProducts(step, graphMap)`
+
+### Architecture
+
+- Topology (MoleculeGraph) is separated from coordinates (molecules.js)
+- Chemistry engines are graph consumers, not graph constructors
+- Renderer remains unchanged — uses molecules.js coordinates only, never imports molecule-graph
 
 ---
 

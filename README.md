@@ -48,8 +48,9 @@ mechlang follows a layered compiler-style pipeline:
     ↓
   parse.js            → AST
     ↓
-  compile.js          → semantic validation + arrow inference + product inference
-    ↓                      (uses semantic-engine.js and product-engine.js)
+  compile.js          → constructs per-step graphMap (MoleculeGraph)
+    ↓                      orchestrates semantic validation + arrow inference + product inference
+    ↓                      (passes graphMap to semantic-engine.js and product-engine.js)
   render.js           → SVG string (pure function, no I/O)
     ↓
   out/*.svg
@@ -57,10 +58,12 @@ mechlang follows a layered compiler-style pipeline:
 
 * `cli.js` handles file I/O and argument parsing
 * `parse.js` handles syntax only — produces the AST
-* `compile.js` orchestrates chemistry reasoning: semantic validation, arrow inference, product inference
-* `semantic-engine.js` validates transforms and infers curved arrows
-* `product-engine.js` performs heuristic product synthesis
+* `compile.js` constructs per-step MoleculeGraph instances, orchestrates semantic validation, arrow inference, product inference
+* `molecule-graph.js` provides structural topology (atoms, bonds, charge) as a read-only query interface
+* `semantic-engine.js` validates transforms and infers curved arrows (receives graphMap from compile)
+* `product-engine.js` performs heuristic product synthesis (receives graphMap from compile)
 * `render.js` handles visualization only — receives pre-compiled mechanism data
+* `molecules.js` provides the static coordinate registry for rendering layout
 
 The renderer is driven entirely by compiled mechanism data — not by hardcoded geometry. Chemistry reasoning never lives in the renderer.
 

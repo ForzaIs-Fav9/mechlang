@@ -128,7 +128,30 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 
 ---
 
-## Phase 6 — Reaction-State Construction (v0.16)
+## Phase 6 — MoleculeGraph (v0.17) ✅ Completed
+
+### G.1 — MoleculeGraph Core ✅
+- Read-only structural graph abstraction (atoms, bonds, charge)
+- `MoleculeGraph.fromRegistry()` factory method
+- Topology-only — no coordinates stored
+
+### G.2 — Structural Query API ✅
+- `getAtom`, `neighbors`, `hasBond`, `getBond`, `bondOrder`, `atomCount`, `bondCount`
+- Element extraction from atom IDs with labels-map priority
+
+### G.3 — Engine Migration ✅
+- semantic-engine.js migrated from moleculeRegistry to MoleculeGraph queries
+- product-engine.js migrated — species classification via graph topology
+- Engines receive graphMap from compile.js, never construct graphs themselves
+
+### G.4 — Compile-Owned Graph Lifetime ✅
+- compile.js constructs per-step `Map<string, MoleculeGraph>`
+- Single ownership point — engines are consumers only
+- Unknown molecules silently skipped (graceful degradation)
+
+---
+
+## Phase 7 — Reaction-State Construction (v0.18+)
 
 ### R.1 — Reaction-State Representation
 - Structured before/transition/after states
@@ -144,7 +167,7 @@ as LaTeX and obtain correct, scalable diagrams without thinking about geometry.
 
 ---
 
-## Phase 7 — Public Launch (v1.0)
+## Phase 8 — Public Launch (v1.0)
 
 ### Six canonical mechanisms must render correctly:
 1. SN2 — single step, 2 arrows, charges
