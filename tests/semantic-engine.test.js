@@ -129,6 +129,58 @@ function runTests() {
     );
   }
 
+  // ───────────────────────────────────────────────────────────────────────
+  // Test 4 — SN2 fluoride arrow inference (regression: product-engine
+  // recognizes F as leaving group but arrow inference must match)
+  // ───────────────────────────────────────────────────────────────────────
+
+  {
+    const step = {
+
+      species: {
+        nuc: 'OH-',
+        sub: 'CH3-F'
+      },
+
+      transforms: [
+        {
+          type: 'form',
+          bond: ['C', 'OH']
+        },
+        {
+          type: 'break',
+          bond: ['C', 'F']
+        }
+      ],
+
+      arrows: [],
+      persist: []
+    };
+
+    const graphMap = buildGraphMap(step.species);
+
+    const arrows =
+      inferArrowsFromTransforms(step, graphMap);
+
+    assert.strictEqual(
+      arrows.length,
+      2,
+      'Expected 2 inferred arrows for SN2 fluoride transform'
+    );
+
+    assert.strictEqual(
+      arrows[0].to,
+      'sub.C-F',
+      'Attack arrow should target the C-F electrophilic bond'
+    );
+
+    assert.strictEqual(
+      arrows[1].to,
+      'sub.F',
+      'Leaving-group arrow should terminate at fluorine'
+    );
+  }
+
   console.log(
     'All semantic-engine tests passed.'
   );
