@@ -150,4 +150,124 @@ assert.throws(
 console.log('✓ Unknown registry key throws');
 
 // ─────────────────────────────────────────────────────────────────────────────
+// getAtom
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ch3brG = MoleculeGraph.fromRegistry('CH3-Br');
+
+assert.deepStrictEqual(
+  ch3brG.getAtom('C'),
+  { id: 'C', element: 'C' }
+);
+
+assert.deepStrictEqual(
+  ch3brG.getAtom('Br'),
+  { id: 'Br', element: 'Br' }
+);
+
+assert.strictEqual(
+  ch3brG.getAtom('O'),
+  null
+);
+
+const acetoneG = MoleculeGraph.fromRegistry('CH3COCH3');
+assert.deepStrictEqual(
+  acetoneG.getAtom('Ca'),
+  { id: 'Ca', element: 'C' }
+);
+
+console.log('✓ getAtom works correctly');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// neighbors
+// ─────────────────────────────────────────────────────────────────────────────
+
+const neighborsC = ch3brG.neighbors('C');
+assert.deepStrictEqual(neighborsC, ['Br']);
+
+const neighborsBr = ch3brG.neighbors('Br');
+assert.deepStrictEqual(neighborsBr, ['C']);
+
+const neighborsNone = ch3brG.neighbors('O');
+assert.deepStrictEqual(neighborsNone, []);
+
+const acetoneCb = acetoneG.neighbors('Cb');
+assert.ok(acetoneCb.includes('Ca'));
+assert.ok(acetoneCb.includes('O'));
+assert.ok(acetoneCb.includes('Cc'));
+assert.strictEqual(acetoneCb.length, 3);
+
+console.log('✓ neighbors works correctly');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// hasBond
+// ─────────────────────────────────────────────────────────────────────────────
+
+assert.strictEqual(ch3brG.hasBond('C', 'Br'), true);
+assert.strictEqual(ch3brG.hasBond('Br', 'C'), true);
+assert.strictEqual(ch3brG.hasBond('C', 'O'), false);
+assert.strictEqual(ch3brG.hasBond('N', 'C'), false);
+
+const cnG = MoleculeGraph.fromRegistry('CN-');
+assert.strictEqual(cnG.hasBond('N', 'C'), true);
+assert.strictEqual(cnG.hasBond('C', 'N'), true);
+
+console.log('✓ hasBond works correctly');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getBond
+// ─────────────────────────────────────────────────────────────────────────────
+
+const cbr = ch3brG.getBond('C', 'Br');
+assert.deepStrictEqual(cbr, { from: 'C', to: 'Br', order: 1 });
+
+const brc = ch3brG.getBond('Br', 'C');
+assert.deepStrictEqual(brc, { from: 'C', to: 'Br', order: 1 });
+
+assert.strictEqual(ch3brG.getBond('C', 'O'), null);
+
+const etheneG = MoleculeGraph.fromRegistry('CH2=CH2');
+const doubleBond = etheneG.getBond('Ca', 'Cb');
+assert.deepStrictEqual(doubleBond, { from: 'Ca', to: 'Cb', order: 2 });
+
+console.log('✓ getBond works correctly');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// bondOrder
+// ─────────────────────────────────────────────────────────────────────────────
+
+assert.strictEqual(ch3brG.bondOrder('C', 'Br'), 1);
+assert.strictEqual(ch3brG.bondOrder('Br', 'C'), 1);
+assert.strictEqual(ch3brG.bondOrder('C', 'O'), null);
+
+assert.strictEqual(etheneG.bondOrder('Ca', 'Cb'), 2);
+assert.strictEqual(etheneG.bondOrder('Cb', 'Ca'), 2);
+
+const acetaldehyde = MoleculeGraph.fromRegistry('CH3CHO');
+assert.strictEqual(acetaldehyde.bondOrder('Cb', 'O'), 2);
+assert.strictEqual(acetaldehyde.bondOrder('Ca', 'Cb'), 1);
+
+console.log('✓ bondOrder works correctly');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// atomCount and bondCount
+// ─────────────────────────────────────────────────────────────────────────────
+
+assert.strictEqual(ch3brG.atomCount(), 2);
+assert.strictEqual(ch3brG.bondCount(), 1);
+
+assert.strictEqual(acetoneG.atomCount(), 4);
+assert.strictEqual(acetoneG.bondCount(), 3);
+
+const ohG = MoleculeGraph.fromRegistry('OH-');
+assert.strictEqual(ohG.atomCount(), 1);
+assert.strictEqual(ohG.bondCount(), 0);
+
+const propene = MoleculeGraph.fromRegistry('CH3-CH=CH2');
+assert.strictEqual(propene.atomCount(), 3);
+assert.strictEqual(propene.bondCount(), 2);
+
+console.log('✓ atomCount and bondCount work correctly');
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('\nAll molecule-graph tests passed.');
