@@ -122,7 +122,8 @@ export function inferArrowsFromTransforms(
             graph.atoms.some(atom =>
               atom.element === 'Br' ||
               atom.element === 'Cl' ||
-              atom.element === 'I'
+              atom.element === 'I' ||
+              atom.element === 'F'
             );
 
           if (hasHalide) {
@@ -140,7 +141,9 @@ export function inferArrowsFromTransforms(
               ? 'Br'
               : subGraph.atoms.find(atom => atom.element === 'Cl')
                 ? 'Cl'
-                : 'I';
+                : subGraph.atoms.find(atom => atom.element === 'I')
+                  ? 'I'
+                  : 'F';
 
           const attackAtom =
             b === 'CN'
@@ -169,7 +172,7 @@ export function inferArrowsFromTransforms(
 
       if (
         a === 'C' &&
-        ['Br', 'Cl', 'I'].includes(b)
+        ['Br', 'Cl', 'I', 'F'].includes(b)
       ) {
 
         let subRole = null;
