@@ -1,3 +1,77 @@
+export function validateTransforms(step, graphMap) {
+
+  for (const transform of step.transforms || []) {
+
+    // ── form C-X validation ───────────────────────────────────────────────
+
+    if (
+      transform.type === 'form'
+    ) {
+
+      const [a, b] =
+        transform.bond;
+
+      if (
+        a === 'C' &&
+        ['CN', 'OH'].includes(b)
+      ) {
+
+        const requiredNucleophile =
+
+          b === 'CN'
+            ? 'CN-'
+            : 'OH-';
+
+        const hasNucleophile =
+          Object.values(
+            step.species
+          ).includes(
+            requiredNucleophile
+          );
+
+        if (!hasNucleophile) {
+
+          console.warn(
+            `[mechlang] transform requires ${requiredNucleophile} nucleophile but none was found.`
+          );
+        }
+      }
+    }
+
+    // ── break C-X validation ─────────────────────────────────────────────
+
+    if (
+      transform.type === 'break'
+    ) {
+
+      const [a, b] =
+        transform.bond;
+
+      let found = false;
+
+      for (
+        const molKey
+        of Object.values(step.species)
+      ) {
+
+        const graph = graphMap.get(molKey);
+        if (!graph) continue;
+
+        if (graph.hasBond(a, b)) {
+          found = true;
+        }
+      }
+
+      if (!found) {
+
+        console.warn(
+          `[mechlang] break transform references missing bond ${a}-${b}.`
+        );
+      }
+    }
+  }
+}
+
 export function inferArrowsFromTransforms(
   step,
   graphMap
@@ -43,27 +117,12 @@ export function inferArrowsFromTransforms(
           const graph = graphMap.get(molKey);
           if (!graph) continue;
 
-          const carbonAtom =
-            graph.atoms.find(atom => atom.element === 'C');
-
+          const carbonAtom = graph.atoms.find(atom => atom.element === 'C');
           if (carbonAtom) {
-
-            const hasHalideBond =
-              graph.neighbors(carbonAtom.id).some(nId => {
-
-                const n = graph.getAtom(nId);
-
-                return (
-                  n &&
-                  (
-                    n.element === 'Br' ||
-                    n.element === 'Cl' ||
-                    n.element === 'I' ||
-                    n.element === 'F'
-                  )
-                );
-              });
-
+            const hasHalideBond = graph.neighbors(carbonAtom.id).some(nId => {
+              const n = graph.getAtom(nId);
+              return n && (n.element === 'Br' || n.element === 'Cl' || n.element === 'I' || n.element === 'F');
+            });
             if (hasHalideBond) {
               subRole = role;
             }
