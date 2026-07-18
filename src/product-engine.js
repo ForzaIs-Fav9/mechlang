@@ -1,18 +1,10 @@
-const SPECIES_RULES = {
+import { MoleculeGraph } from './molecule-graph.js';
 
-  // ───────────────────────────────────────────────────────────────────────
-  // Nucleophiles
-  // ───────────────────────────────────────────────────────────────────────
+const HALIDES = ['Br', 'Cl', 'I', 'F'];
 
-  'CN-': {
-    category: 'nucleophile',
-    role: 'cyanide'
-  },
-
-  'OH-': {
-    category: 'nucleophile',
-    role: 'hydroxide'
-  }
+const NUCLEOPHILE_ROLES = {
+  'CN-': 'cyanide',
+  'OH-': 'hydroxide'
 };
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -28,44 +20,32 @@ function classifySpecies(mol) {
     molecule: mol
   };
 
-  // ───────────────────────────────────────────────────────────────────────
-  // Rule-based species semantics
-  // ───────────────────────────────────────────────────────────────────────
-
-  if (
-    SPECIES_RULES[mol]
-  ) {
-
-    Object.assign(
-      info,
-      SPECIES_RULES[mol]
-    );
+  if (NUCLEOPHILE_ROLES[mol]) {
+    info.category = 'nucleophile';
+    info.role = NUCLEOPHILE_ROLES[mol];
+    return info;
   }
 
-  // ───────────────────────────────────────────────────────────────────────
-  // Methyl halides
-  // ───────────────────────────────────────────────────────────────────────
+  let graph;
+  try {
+    graph = MoleculeGraph.fromRegistry(mol);
+  } catch {
+    return info;
+  }
 
-  if (
-    mol.startsWith('CH3-')
-  ) {
+  // TODO(M4+): Replace element scan with MoleculeGraph.hasElement()/findElement() if the classification API is introduced.
+  const carbonAtom = graph.atoms.find(a => a.element === 'C');
+  if (!carbonAtom) return info;
 
-    if (mol.endsWith('Br')) {
+  const carbonNeighbors = graph.neighbors(carbonAtom.id);
+
+  for (const neighborId of carbonNeighbors) {
+    const neighbor = graph.getAtom(neighborId);
+    if (neighbor && HALIDES.includes(neighbor.element)) {
       info.category = 'substrate';
       info.role = 'methyl-halide';
-      info.leavingGroup = 'Br';
-    }
-
-    if (mol.endsWith('Cl')) {
-      info.category = 'substrate';
-      info.role = 'methyl-halide';
-      info.leavingGroup = 'Cl';
-    }
-
-    if (mol.endsWith('I')) {
-      info.category = 'substrate';
-      info.role = 'methyl-halide';
-      info.leavingGroup = 'I';
+      info.leavingGroup = neighbor.element;
+      return info;
     }
   }
 
