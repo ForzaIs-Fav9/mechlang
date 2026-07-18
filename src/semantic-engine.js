@@ -117,17 +117,15 @@ export function inferArrowsFromTransforms(
           const graph = graphMap.get(molKey);
           if (!graph) continue;
 
-          // TODO(M4): Replace element scans with MoleculeGraph.hasElement() during the classification milestone.
-          const hasHalide =
-            graph.atoms.some(atom =>
-              atom.element === 'Br' ||
-              atom.element === 'Cl' ||
-              atom.element === 'I' ||
-              atom.element === 'F'
-            );
-
-          if (hasHalide) {
-            subRole = role;
+          const carbonAtom = graph.atoms.find(atom => atom.element === 'C');
+          if (carbonAtom) {
+            const hasHalideBond = graph.neighbors(carbonAtom.id).some(nId => {
+              const n = graph.getAtom(nId);
+              return n && (n.element === 'Br' || n.element === 'Cl' || n.element === 'I' || n.element === 'F');
+            });
+            if (hasHalideBond) {
+              subRole = role;
+            }
           }
         }
 
