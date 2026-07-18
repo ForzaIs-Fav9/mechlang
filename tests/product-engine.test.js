@@ -4,6 +4,8 @@ import {
   inferProducts
 } from '../src/product-engine.js';
 
+import { buildGraphMap } from './test-utils.js';
+
 function runTests() {
 
   // ───────────────────────────────────────────────────────────────────────
@@ -18,8 +20,10 @@ function runTests() {
       persist: []
     };
 
+    const graphMap = buildGraphMap(step.species);
+
     const result =
-      inferProducts(step);
+      inferProducts(step, graphMap);
 
     assert.strictEqual(
       result.inferred,
@@ -73,8 +77,10 @@ function runTests() {
       persist: []
     };
 
+    const graphMap = buildGraphMap(step.species);
+
     const result =
-      inferProducts(step);
+      inferProducts(step, graphMap);
 
     assert.strictEqual(
       result.inferred,
@@ -131,8 +137,10 @@ function runTests() {
       persist: []
     };
 
+    const graphMap = buildGraphMap(step.species);
+
     const result =
-      inferProducts(step);
+      inferProducts(step, graphMap);
 
     assert.strictEqual(
       result.inferred,
@@ -185,8 +193,10 @@ function runTests() {
       persist: []
     };
 
+    const graphMap = buildGraphMap(step.species);
+
     const result =
-      inferProducts(step);
+      inferProducts(step, graphMap);
 
     assert.strictEqual(
       result.inferred,
@@ -237,8 +247,10 @@ function runTests() {
       persist: []
     };
 
+    const graphMap = buildGraphMap(step.species);
+
     const result =
-      inferProducts(step);
+      inferProducts(step, graphMap);
 
     assert.strictEqual(
       result.inferred,

@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 import { writeFileSync, unlinkSync, readFileSync, existsSync } from 'fs';
 import { parseMechlang } from '../src/parse.js';
 import { validateTransforms } from '../src/semantic-engine.js';
+import { buildGraphMap } from './test-utils.js';
 
 function captureWarns(fn) {
   const warnings = [];
@@ -248,7 +249,7 @@ step {
     let threw = false;
     captureWarns(() => {
       try {
-        validateTransforms(step);
+        validateTransforms(step, buildGraphMap(step.species));
       } catch {
         threw = true;
       }
@@ -272,7 +273,7 @@ step {
     };
 
     const warnings = captureWarns(() => {
-      validateTransforms(step);
+      validateTransforms(step, buildGraphMap(step.species));
     });
 
     const match = warnings.find(w => w.includes('missing bond') && w.includes('X-Z'));
@@ -294,7 +295,7 @@ step {
     };
 
     const warnings = captureWarns(() => {
-      validateTransforms(step);
+      validateTransforms(step, buildGraphMap(step.species));
     });
 
     const match = warnings.find(w => w.includes('CN-') && w.includes('nucleophile'));

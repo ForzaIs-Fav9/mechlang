@@ -1,5 +1,3 @@
-import { MoleculeGraph } from './molecule-graph.js';
-
 const HALIDES = ['Br', 'Cl', 'I', 'F'];
 
 const NUCLEOPHILE_ROLES = {
@@ -11,7 +9,7 @@ const NUCLEOPHILE_ROLES = {
 // Species classification
 // ─────────────────────────────────────────────────────────────────────────
 
-function classifySpecies(mol) {
+function classifySpecies(mol, graphMap) {
 
   const info = {
     category: null,
@@ -26,12 +24,8 @@ function classifySpecies(mol) {
     return info;
   }
 
-  let graph;
-  try {
-    graph = MoleculeGraph.fromRegistry(mol);
-  } catch {
-    return info;
-  }
+  const graph = graphMap.get(mol);
+  if (!graph) return info;
 
   // TODO(M4+): Replace element scan with MoleculeGraph.hasElement()/findElement() if the classification API is introduced.
   const carbonAtom = graph.atoms.find(a => a.element === 'C');
@@ -108,7 +102,7 @@ const SN2_RULES = [
   }
 ];
 
-export function inferProducts(step) {
+export function inferProducts(step, graphMap) {
 
   const result = {
     inferred: false,
@@ -130,7 +124,7 @@ export function inferProducts(step) {
   for (const [, mol] of species) {
 
     const info =
-      classifySpecies(mol);
+      classifySpecies(mol, graphMap);
 
     if (
       info.category === 'nucleophile'
