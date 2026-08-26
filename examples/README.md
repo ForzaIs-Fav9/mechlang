@@ -1,6 +1,6 @@
 # Examples
 
-This directory contains example mechlang files demonstrating the current capabilities of the language and renderer.
+This directory contains example MechLang files demonstrating the current capabilities of the language, semantic pipeline, and renderer.
 
 ## Canonical Examples
 
@@ -16,9 +16,22 @@ Demonstrates:
 
 This example represents the intended “happy path” for users.
 
+### acid_base.mech
+
+A compact acid-base mechanism example.
+
+Demonstrates:
+- Explicit species declarations
+- Proton transfer
+- Curved-arrow electron flow
+- Bond-breaking electron flow
+- Explicit atom and bond anchors
+
+This example provides a minimal introduction to representing a complete mechanism in MechLang.
+
 ### transform_test.mech
 
-The canonical semantic-transform example for v0.15.
+The canonical semantic-transform example.
 
 Demonstrates:
 - `transform {}` blocks
@@ -26,6 +39,8 @@ Demonstrates:
 - Heuristic product inference
 - Product rendering
 - Leaving-group departure rendering
+
+This example demonstrates the compiler's ability to infer mechanism visualization from semantic reaction transforms.
 
 ## Semantic Diagnostics Examples
 
@@ -88,4 +103,4 @@ Used to test:
 
 Examples are illustrative, not exhaustive.
 
-They may evolve as the renderer gains new capabilities.
+They may evolve as the compiler, semantic engine, and renderer gain new capabilities.

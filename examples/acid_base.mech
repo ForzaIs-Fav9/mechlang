@@ -1,0 +1,18 @@
+step {
+  species:
+    base    = OH-
+    acid    = HBr
+    leaving = Br-
+
+  arrow(
+    curved,
+    from = base.O,
+    to   = acid.H
+  )
+
+  arrow(
+    curved,
+    from = acid.H-Br,
+    to   = leaving.Br
+  )
+}
